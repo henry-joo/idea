@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>교육 만족도 대시보드</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.9.6/jstat.min.js"></script>
+<style>
+:root{--accent:#F26300;--ink:#0f172a;--bg:#f8fafc;--card:#fff;--line:#e2e8f0;--mute:#64748b;--navy:#1e3a8a;--ok:#15803d;--bad:#b91c1c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 -apple-system,"Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:256px;background:var(--ink);color:#cbd5e1;padding:20px 12px;z-index:5}
+.sidebar h1{font-size:16px;color:#fff;margin:0 8px 4px}.sidebar small{display:block;margin:0 8px 20px;color:#94a3b8;font-size:12px}
+.nav button{display:block;width:100%;text-align:left;background:none;border:0;color:#cbd5e1;padding:10px 12px;border-radius:8px;font:inherit;cursor:pointer;margin-bottom:2px}
+.nav button:hover{background:#1e293b}.nav button.on{background:var(--accent);color:#fff;font-weight:600}
+.header{position:fixed;left:256px;right:0;top:0;height:64px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 28px;z-index:4}
+.header h2{margin:0;font-size:17px}.header .meta{color:var(--mute);font-size:12px}
+.main{margin-left:256px;padding:88px 28px 40px}.wrap{max-width:1280px;margin:0 auto}
+section.tab{display:none}section.tab.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:18px;position:relative}
+.card h3{margin:0 0 12px;font-size:15px;padding-right:90px}
+.badge{position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;color:#fff;border-radius:999px;padding:2px 10px}
+.badge.code{background:var(--navy)}.badge.ai{background:var(--accent)}.badge.human{background:#64748b}
+.inline-badge{position:static;display:inline-block;margin-left:6px}
+.drop{border:2px dashed #cbd5e1;border-radius:12px;padding:28px;text-align:center;color:var(--mute);cursor:pointer;background:#fff}
+.drop.over{border-color:var(--accent);background:#fff7ed}
+button.btn{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
+button.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+input[type=text],input[type=password],select,textarea{font:inherit;border:1px solid var(--line);border-radius:8px;padding:7px 10px;width:100%;background:#fff}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}th{background:#f1f5f9;font-weight:600}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.scroll{overflow-x:auto}
+.grid{display:grid;gap:14px}.g6{grid-template-columns:repeat(6,1fr)}.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g5f{grid-template-columns:repeat(5,1fr)}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
+.kpi .t{font-size:12px;color:var(--mute)}.kpi .v{font-size:28px;font-weight:800;color:var(--ink)}.kpi .s{font-size:12px;color:var(--mute)}
+.bars{margin-top:8px}.bar{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mute);height:14px;margin-bottom:2px}
+.bar i{display:block;height:8px;background:var(--accent);border-radius:4px}.bar span:first-child{width:22px}.bar span:last-child{width:34px;text-align:right}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}.chips b{font-size:12px;width:46px;color:var(--mute)}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 11px;font-size:12px;cursor:pointer}.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.sig{color:var(--bad);font-weight:700}.warn{color:#b45309}.ok{color:var(--ok)}
+.pos{color:var(--ok)}.neg{color:var(--bad)}
+.opn{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.quote{font-size:12.5px;color:#334155;border-left:3px solid var(--line);padding:2px 8px;margin:4px 0}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;background:#f1f5f9;margin:1px}
+.formgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.formgrid label{font-size:12px;color:var(--mute)}
+.mail{background:#fff;border:1px solid var(--line);padding:16px;border-radius:8px}
+.slide{width:960px;height:540px;background:#fff;border:1px solid var(--line);padding:36px 44px;margin:0 auto 16px;position:relative;overflow:hidden;page-break-after:always;font-size:15px}
+.slide h2{margin:0 0 14px;color:var(--ink);border-left:6px solid var(--accent);padding-left:12px;font-size:24px}
+.slide .foot{position:absolute;bottom:14px;left:44px;right:44px;font-size:11px;color:var(--mute);display:flex;justify-content:space-between}
+.preview-wrap{overflow-x:auto}
+#printRoot{display:none}
+@media(max-width:1000px){.sidebar{position:static;width:auto}.header{position:static}.main{margin:0;padding:16px}.g6,.g3,.g5f,.formgrid{grid-template-columns:1fr 1fr}.g2{grid-template-columns:1fr}}
+@media print{
+  body.printing>*:not(#printRoot){display:none!important}
+  body.printing #printRoot{display:block}
+  body.printing .slide{border:0;margin:0;page-break-after:always}
+  @page{size:960px 540px;margin:0}
+}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <h1>교육 만족도 대시보드</h1><small>자동 분석 · 보고서 생성기</small>
+  <div class="nav" id="nav">
+    <button data-t="data" class="on">① 파일 업로드 · 인식</button>
+    <button data-t="dash">② 핵심 지표 · 차트</button>
+    <button data-t="open">③ 주관식 AI 분류</button>
+    <button data-t="ask">④ 데이터에게 묻기</button>
+    <button data-t="report">⑤ 결과보고서</button>
+  </div>
+</aside>
+<header class="header"><h2 id="hTitle">파일 업로드 · 인식</h2><div class="meta" id="hMeta">파일을 올려주세요</div></header>
+
+<main class="main"><div class="wrap">
+
+<!-- 1. 업로드 -->
+<section class="tab on" id="tab-data">
+  <div class="card"><span class="badge code">코드</span><h3>파일 업로드</h3>
+    <div class="drop" id="drop">엑셀(.xlsx, .xls) · .csv 파일을 끌어놓거나 클릭해서 여러 개 선택<br><small>브라우저 메모리에서만 처리되며 서버로 전송되지 않습니다 · 이름/사번/연락처 열은 읽는 즉시 삭제</small></div>
+    <input type="file" id="file" multiple accept=".xlsx,.xls,.csv" hidden>
+    <p style="margin:10px 0 0"><button class="btn ghost" id="btnSample">샘플 데이터로 체험하기</button> <small style="color:var(--mute)">(가상 데이터 · 3개 차수, 제목행/합계행/이름열 포함)</small></p>
+  </div>
+  <div class="card"><span class="badge ai">AI</span><h3>AI 설정 (선택)</h3>
+    <div class="grid g2"><div><label>Anthropic API Key (메모리에만 보관, 저장 안 함)</label><input type="password" id="apiKey" placeholder="sk-ant-... (없으면 코드 규칙으로 동작)"></div>
+    <div><label>모델</label><input type="text" id="apiModel" value="claude-sonnet-5-5"></div></div>
+    <small style="color:var(--mute)">열 매핑 시 열 이름과 상위 3행 샘플만 전송합니다. 주관식 분류·질문·시사점 생성은 해당 버튼을 누를 때만 호출하며, 호출 전 확인 창이 뜹니다.</small>
+  </div>
+  <div id="recognition"></div>
+</section>
+
+<!-- 2. 대시보드 -->
+<section class="tab" id="tab-dash"><div id="dashEmpty" class="card">먼저 파일을 업로드하세요.</div><div id="dashBody" hidden>
+  <div class="card"><span class="badge code">코드</span><h3>필터</h3><div id="filters"></div></div>
+  <div class="grid g6" id="kpis" style="margin-bottom:18px"></div>
+  <div class="grid g2">
+    <div class="card"><span class="badge code">코드</span><h3>차수별 평균 (5점 만점)</h3><div style="height:260px"><canvas id="cRound"></canvas></div></div>
+    <div class="card"><span class="badge code">코드</span><h3>집단별 전반 만족도 <select id="grpSel" style="width:auto;display:inline-block;padding:2px 8px"><option value="job">직군</option><option value="career">경력</option><option value="dept">부서</option><option value="rank">직책</option></select></h3><div style="height:260px"><canvas id="cGroup"></canvas></div></div>
+    <div class="card"><span class="badge code">코드</span><h3>전반 만족도 분포</h3><div style="height:260px"><canvas id="cDist"></canvas></div></div>
+    <div class="card"><span class="badge code">코드</span><h3>NPS 구성</h3><div style="height:260px"><canvas id="cNps"></canvas></div></div>
+  </div>
+  <div class="card"><span class="badge code">코드</span><h3>차수 간 전체 쌍(Pairwise) Welch t-test <small style="font-weight:400;color:var(--mute)">p &lt; 0.05 → 차이 있음</small></h3><div class="scroll" id="ttest"></div></div>
+</div></section>
+
+<!-- 3. 주관식 -->
+<section class="tab" id="tab-open"><div id="openEmpty" class="card">먼저 파일을 업로드하세요.</div><div id="openBody" hidden>
+  <div class="card"><span class="badge ai inline-badge" id="openBadge" style="position:absolute">코드 규칙</span><h3>주관식 긍정·부정·제안 분류</h3>
+    <button class="btn" id="btnAiOpen">AI로 분류·요약 실행</button> <small style="color:var(--mute)">현재 필터 기준 · 빈칸/무응답은 집계에서 제외 · AI 미사용 시 키워드 규칙으로 분류</small></div>
+  <div class="opn" id="openCards"></div>
+</div></section>
+
+<!-- 4. 질문 -->
+<section class="tab" id="tab-ask"><div class="card"><span class="badge ai">AI + 코드</span><h3>데이터에게 묻기</h3>
+  <div style="display:flex;gap:8px"><input type="text" id="askQ" placeholder="예: 강사 만족도가 가장 낮은 차수는? / NPS는 몇 점인가요?"><button class="btn" id="askBtn" style="white-space:nowrap">질문</button></div>
+  <div id="askOut" style="margin-top:14px"></div>
+  <small style="color:var(--mute)">현재 필터링된 집단의 계산 결과만 근거로 답변하며, 답변 속 숫자는 계산 결과와 대조해 검증 배지를 표시합니다. API Key가 없으면 규칙 기반 답변을 합니다.</small></div></section>
+
+<!-- 5. 보고서 -->
+<section class="tab" id="tab-report">
+  <div class="card"><span class="badge human">사람</span><h3>교육 기본정보 입력</h3>
+    <div class="formgrid" id="repForm">
+      <div><label>교육명</label><input type="text" data-k="name" value=""></div>
+      <div><label>일시</label><input type="text" data-k="date" value=""></div>
+      <div><label>강사</label><input type="text" data-k="inst" value=""></div>
+      <div><label>운영</label><input type="text" data-k="ops" value=""></div>
+      <div><label>보고자</label><input type="text" data-k="by" value=""></div>
+    </div>
+    <p style="margin:12px 0 0"><button class="btn ghost" id="btnInsightAi">AI 시사점 생성</button> <small style="color:var(--mute)" id="insightSrc">시사점: 코드 규칙</small></p>
+  </div>
+  <div class="card"><span class="badge code">코드</span><h3>메일형 HTML 보고서 <button class="btn" id="btnCopy" style="margin-left:8px">HTML 복사</button></h3><div class="mail" id="mailView">파일을 업로드하면 보고서가 생성됩니다.</div></div>
+  <div class="card"><span class="badge code">코드</span><h3>교안형 4장 슬라이드 <button class="btn" id="btnPrint" style="margin-left:8px">PDF 인쇄</button></h3><div class="preview-wrap" id="slideView"></div></div>
+</section>
+
+</div></main>
+<div id="printRoot"></div>
+
+<script>
+/* ============ 상수 · 유틸 ============ */
+const F5=['sat','goal','inst','diff'];
+const LBL={sat:'전반 만족도',goal:'목적 달성도',inst:'강사 만족도',diff:'내용·실습 난이도',nps:'추천 의향(NPS)',round:'차수',dept:'부서',job:'직군',rank:'직책',career:'경력',o1:'만족도 평가 이유',o2:'난이도 평가 이유',o3:'가장 좋았던 점',o4:'보완점'};
+const OPEN=['o1','o2','o3','o4'], ATTR=['round','dept','job','rank','career'];
+/* 매핑 규칙 (평가 순서 중요: 구체적인 것 먼저) */
+const RULES=[
+ ['o1',h=>/이유/.test(h)&&/만족/.test(h)],['o2',h=>/이유/.test(h)&&/난이도/.test(h)],
+ ['o3',h=>/좋았던|좋은 ?점|잘된/.test(h)],['o4',h=>/보완|개선|아쉬/.test(h)],
+ ['nps',h=>/추천/.test(h)],['goal',h=>/목적|달성/.test(h)],['inst',h=>/강사|강의 ?스킬/.test(h)],['diff',h=>/난이도|실습/.test(h)],['sat',h=>/만족/.test(h)],
+ ['round',h=>/차수|회차|기수/.test(h)],['dept',h=>/부서|팀/.test(h)],['job',h=>/직군/.test(h)],['rank',h=>/직책|직급/.test(h)],['career',h=>/경력|연차/.test(h)]];
+const PII=/이름|성명|사번|연락처|전화|휴대폰|핸드폰|이메일|e-?mail|주민/i;
+const TEXTMAP={매우만족:5,만족:4,보통:3,불만족:2,매우불만족:1,매우그렇다:5,그렇다:4,보통이다:3,그렇지않다:2,전혀그렇지않다:1,매우적절:5,적절:4,적절하다:4,부적절:2,매우부적절:1,매우쉬움:1,매우어려움:5};
+const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const f2=x=>x==null||isNaN(x)?'–':(+x).toFixed(2), pct=x=>x==null?'–':(x*100).toFixed(1)+'%';
+const nat=(a,b)=>{const x=parseFloat((String(a).match(/\d+(\.\d+)?/)||[0])[0]),y=parseFloat((String(b).match(/\d+(\.\d+)?/)||[0])[0]);return x-y||String(a).localeCompare(String(b),'ko')};
+const mean=a=>a.reduce((s,x)=>s+x,0)/a.length, vr=(a,m)=>a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1);
+const S={tables:[],recs:[],conv:{},scale:{},filters:{},ai:{labels:{},summary:{},model:null},report:{name:'',date:'',inst:'',ops:'',by:''},insight:null,insightSrc:'코드 규칙',files:[]};
+let charts={};
+
+/* ============ 파일 읽기 ============ */
+async function readFiles(files){
+  const list=[...files].filter(f=>!f.name.startsWith('~$')&&/\.(xlsx|xls|csv)$/i.test(f.name));
+  const skipped=[...files].length-list.length; const sheets=[];
+  for(const f of list){
+    try{
+      const buf=await f.arrayBuffer(); let wb;
+      if(/\.csv$/i.test(f.name)){let t;try{t=new TextDecoder('utf-8',{fatal:true}).decode(buf)}catch{t=new TextDecoder('euc-kr').decode(buf)}wb=XLSX.read(t,{type:'string'})}
+      else wb=XLSX.read(buf,{type:'array'});
+      wb.SheetNames.forEach(n=>sheets.push({file:f.name,sheet:n,multi:wb.SheetNames.length>1,aoa:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:'',raw:true})}));
+    }catch(e){sheets.push({file:f.name,sheet:'',error:String(e.message||e)})}
+  }
+  await ingest(sheets,skipped);
+}
+function cleanSheet(sh){
+  const rep={file:sh.file,sheet:sh.sheet,removed:{empty:0,summary:0,dup:0},pii:[],warnings:[]};
+  const aoa=sh.aoa.map(r=>r.map(c=>typeof c==='string'?c.trim():c));
+  let best=-1,hi=0;
+  aoa.slice(0,20).forEach((r,i)=>{const hits=r.filter(c=>typeof c==='string'&&RULES.some(([,fn])=>fn(c))).length;const sc=hits*10+r.filter(c=>c!=='').length*.01;if(sc>best){best=sc;hi=i}});
+  rep.headerRow=hi+1; rep.titleRows=hi;
+  let headers=aoa[hi].map((h,i)=>String(h||('열'+(i+1))).replace(/\s+/g,' '));
+  const seen={};headers=headers.map(h=>{seen[h]=(seen[h]||0)+1;return seen[h]>1?h+'_'+seen[h]:h});
+  const keepIdx=headers.map((h,i)=>i).filter(i=>{if(PII.test(headers[i])){rep.pii.push(headers[i]);return false}return true});
+  const keys=new Set(),rows=[];
+  for(const r of aoa.slice(hi+1)){
+    if(r.every(c=>c==='')){rep.removed.empty++;continue}
+    if(r.slice(0,3).some(c=>typeof c==='string'&&/^(합계|총계|소계|평균|total|average|sum)/i.test(c.replace(/\s/g,'')))){rep.removed.summary++;continue}
+    if(r.filter(c=>c!=='').length<=1&&headers.length>3){rep.removed.empty++;continue}
+    const k=JSON.stringify(r);if(keys.has(k)){rep.removed.dup++;continue}keys.add(k);
+    rows.push(keepIdx.map(i=>r[i]??''));
+  }
+  return {headers:keepIdx.map(i=>headers[i]),rows,rep,sh};
+}
+async function ingest(sheets,skipped){
+  S.tables=[];const errs=[];
+  for(const sh of sheets){if(sh.error){errs.push(sh.file+': '+sh.error);continue}const t=cleanSheet(sh);if(t.rows.length)S.tables.push(t)}
+  S.errs=errs;S.skipped=skipped;
+  for(const t of S.tables){t.map=ruleMap(t.headers);t.mapSrc='코드 규칙';
+    if($('#apiKey').value.trim()){try{await aiMap(t)}catch(e){t.rep.warnings.push('AI 매핑 실패 → 코드 규칙 사용 ('+e.message+')')}}}
+  S.conv={};S.filters={};S.ai={labels:{},summary:{},model:null};S.insight=null;S.insightSrc='코드 규칙';
+  build();
+}
+function ruleMap(headers){
+  const map={},used=new Set();
+  for(const [f,fn] of RULES){const i=headers.findIndex((h,i)=>!used.has(i)&&fn(h));if(i>=0){map[f]=i;used.add(i)}}
+  return map;
+}
+/* ============ AI ============ */
+async function callAI(system,user,max=2000){
+  const key=$('#apiKey').value.trim();if(!key)throw new Error('API Key 없음');
+  const model=$('#apiModel').value.trim()||'claude-sonnet-5-5';
+  const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model,max_tokens:max,system,messages:[{role:'user',content:user}]})});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const j=await r.json();S.ai.model=model;return j.content.map(c=>c.text||'').join('');
+}
+const jsonOf=t=>JSON.parse(t.match(/[\[{][\s\S]*[\]}]/)[0]);
+async function aiMap(t){
+  const sample=t.headers.map((h,i)=>({i,h,s:t.rows.slice(0,3).map(r=>String(r[i]).slice(0,30))}));
+  const txt=await callAI('열 이름 매핑 도우미. JSON만 출력.',`다음 열(i=번호,h=이름,s=샘플3개)을 표준 필드에 매핑하세요. 필드: round(차수), dept(부서), job(직군), rank(직책), career(경력), sat(전반 만족도), goal(목적 달성도), inst(강사 만족도), diff(난이도 적절성), nps(추천 의향 0~10), o1(만족 이유 주관식), o2(난이도 이유 주관식), o3(좋았던 점), o4(보완점). 해당 없으면 생략. 출력 예: {"sat":3,"nps":7}\n`+JSON.stringify(sample));
+  const m=jsonOf(txt),ok={};for(const k in m)if(Number.isInteger(m[k])&&m[k]>=0&&m[k]<t.headers.length&&LBL[k])ok[k]=m[k];
+  if(Object.keys(ok).length>=8){t.map=ok;t.mapSrc='AI ('+S.ai.model+')'}
+}
+/* ============ 표준 레코드 구성 ============ */
+function normRound(v,t){
+  if(v===''||v==null)return t.sh.multi?t.sh.sheet:t.sh.file.replace(/\.[^.]+$/,'');
+  if(typeof v==='number')return v+'차';const s=String(v).trim();return /^\d+$/.test(s)?s+'차':s;
+}
+function build(){
+  S.recs=[];
+  for(const t of S.tables){for(const r of t.rows){
+    const rec={file:t.sh.file,raw:{},v:{}};
+    for(const f of [...ATTR,...OPEN,...F5,'nps']){const i=t.map[f];rec.raw[f]=i==null?'':r[i]}
+    rec.round=normRound(rec.raw.round,t);
+    for(const f of ['dept','job','rank','career'])rec[f]=String(rec.raw[f]??'').trim()||'(미응답)';
+    S.recs.push(rec);
+  }}
+  // 척도 감지
+  S.scale={};
+  for(const f of [...F5]){
+    const nums=[];let text=0;
+    S.recs.forEach(r=>{const x=r.raw[f];if(x===''||x==null)return;if(typeof x==='number')nums.push(x);else{const s=String(x).trim();if(/^-?\d+(\.\d+)?$/.test(s))nums.push(+s);else if(TEXTMAP[s.replace(/\s/g,'')]!=null)text++}});
+    S.scale[f]={text,hasTen:nums.length&&Math.max(...nums)>5,min:nums.length?Math.min(...nums):1,max:nums.length?Math.max(...nums):5};
+    S.conv[f]=S.conv[f]||{text:true,ten:true};
+  }
+  recompute();
+}
+function toNum(f,raw){
+  if(raw===''||raw==null)return null;let x;
+  if(typeof raw==='number')x=raw;else{const s=String(raw).trim();
+    if(/^-?\d+(\.\d+)?$/.test(s))x=+s;
+    else{const m=TEXTMAP[s.replace(/\s/g,'')];if(m!=null)return(f==='nps'||S.conv[f].text)?m:null;const mm=s.match(/^(\d+(?:\.\d+)?)\s*점/);if(mm)x=+mm[1];else return null}}
+  if(f==='nps')return x>=0&&x<=10?x:null;
+  const sc=S.scale[f];
+  if(sc.hasTen&&S.conv[f].ten){x=sc.min<1?1+0.4*x:1+(4/9)*(x-1);x=Math.round(x*100)/100}
+  return x>=1&&x<=5?x:null;
+}
+function recompute(){
+  S.invalid={};
+  S.recs.forEach(r=>{for(const f of [...F5,'nps']){r.v[f]=toNum(f,r.raw[f]);if(r.v[f]==null&&r.raw[f]!==''&&r.raw[f]!=null)S.invalid[f]=(S.invalid[f]||0)+1}});
+  renderAll();
+}
+/* ============ 통계 ============ */
+function filtered(){return S.recs.filter(r=>ATTR.every(d=>!(S.filters[d]&&S.filters[d].size)||S.filters[d].has(r[d])))}
+function stat(rows,f){
+  const v=rows.map(r=>r.v[f]).filter(x=>x!=null);const n=v.length;
+  if(f==='nps'){const p=v.filter(x=>x>=9).length,d=v.filter(x=>x<=6).length;return{n,mean:n?mean(v):null,prom:n?p/n:null,pass:n?(n-p-d)/n:null,det:n?d/n:null,score:n?(p-d)/n*100:null,pc:p,dc:d}}
+  const dist=[0,0,0,0,0,0];v.forEach(x=>dist[Math.max(1,Math.min(5,Math.round(x)))]++);
+  return{n,mean:n?mean(v):null,pos:n?(dist[4]+dist[5])/n:null,dist};
+}
+function welch(a,b){
+  const n1=a.length,n2=b.length;if(n1<2||n2<2)return null;const m1=mean(a),m2=mean(b),v1=vr(a,m1),v2=vr(b,m2),se2=v1/n1+v2/n2;if(se2===0)return null;
+  const t=(m1-m2)/Math.sqrt(se2),df=se2**2/((v1/n1)**2/(n1-1)+(v2/n2)**2/(n2-1)),p=2*(1-jStat.studentt.cdf(Math.abs(t),df));
+  return{m1,m2,t,df,p,n1,n2};
+}
+function pairwise(rows){
+  const rounds=[...new Set(rows.map(r=>r.round))].sort(nat),out=[];
+  for(const f of [...F5,'nps'])for(let i=0;i<rounds.length;i++)for(let j=i+1;j<rounds.length;j++){
+    const a=rows.filter(r=>r.round===rounds[i]).map(r=>r.v[f]).filter(x=>x!=null),b=rows.filter(r=>r.round===rounds[j]).map(r=>r.v[f]).filter(x=>x!=null);
+    out.push({f,a:rounds[i],b:rounds[j],res:welch(a,b)});
+  }
+  return out;
+}
+function allMetrics(rows){const m={};[...F5,'nps'].forEach(f=>m[f]=stat(rows,f));return m}
+
+/* ============ 주관식 ============ */
+const SUG=/했으면|하면 ?좋|좋겠|바랍니다|바래요|필요|개선|늘려|늘리|추가|보완|제안|확대|줄여|해 ?주세요|해 ?주시/,
+NEG=/어렵|부족|아쉬|불편|지루|힘들|너무 ?(짧|길|빠|느)|복잡|산만|불만|미흡|부담|이해가 ?(안|잘 ?안)|이해하기 ?어|않았|못했/,
+POS=/좋|만족|유익|도움|훌륭|최고|감사|재미|알찼|명확|친절|체계|적절|실무|흥미|효과|이해가 ?잘|쉽게/;
+const TOPICS=[['강사·강의',/강사|강의|설명|전달/],['교육 내용',/내용|커리큘럼|주제|이론/],['실습',/실습|과제|예제|핸즈온/],['시간·일정',/시간|일정|분량|진도|길|짧/],['운영·환경',/운영|장소|환경|공간|장비|네트워크|식사|안내/],['교육자료',/자료|교안|PPT|ppt|문서/],['난이도',/난이도|어렵|쉬웠|쉽/]];
+const blank=s=>{s=String(s??'').trim();return !s||/^(없음|없습니다|없어요|특이사항 ?없음|해당 ?없음|x|-|\.|n\/a|na|무)$/i.test(s)};
+function ruleLabel(t){if(SUG.test(t))return'제안';if(NEG.test(t)||/(않|못|안).{0,6}(좋|도움|만족|적절)/.test(t))return'부정';if(POS.test(t))return'긍정';return'제안'}
+function openStats(rows,f){
+  const texts=rows.map(r=>String(r.raw[f]??'').trim()),used=texts.filter(t=>!blank(t));
+  const cnt={긍정:0,부정:0,제안:0},byLabel={긍정:[],부정:[],제안:[]},topic={};
+  used.forEach(t=>{const l=S.ai.labels[t]||ruleLabel(t);cnt[l]++;byLabel[l].push(t);TOPICS.forEach(([n,re])=>{if(re.test(t))(topic[n]=topic[n]||{긍정:0,부정:0,제안:0})[l]++})});
+  const quotes={};for(const l in byLabel)quotes[l]=[...new Set(byLabel[l])].sort((a,b)=>Math.abs(a.length-45)-Math.abs(b.length-45)).slice(0,3);
+  return{total:texts.length,used:used.length,excluded:texts.length-used.length,cnt,quotes,topic};
+}
+function openSummaryText(st,f){
+  const u=st.used||1,tp=Object.entries(st.topic).map(([k,v])=>[k,v.긍정+v.부정+v.제안]).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]+'('+x[1]+')').join(', ');
+  return`유효 ${st.used}건 중 긍정 ${(st.cnt.긍정/u*100).toFixed(0)}% · 부정 ${(st.cnt.부정/u*100).toFixed(0)}% · 제안 ${(st.cnt.제안/u*100).toFixed(0)}%`+(tp?`. 자주 언급된 주제: ${tp}.`:'.');
+}
+
+/* ============ 렌더링 ============ */
+function renderAll(){
+  renderRecognition();
+  const has=S.recs.length>0;
+  ['dash','open'].forEach(k=>{$('#'+k+'Empty').hidden=has;$('#'+k+'Body').hidden=!has});
+  $('#hMeta').textContent=has?`${S.recs.length}건 · ${S.tables.length}개 시트 · 차수 ${new Set(S.recs.map(r=>r.round)).size}개`:'파일을 올려주세요';
+  if(!has){renderReport();return}
+  renderFilters();renderDash();renderOpen();renderReport();
+}
+function renderRecognition(){
+  const box=$('#recognition');if(!S.tables.length&&!(S.errs||[]).length){box.innerHTML='';return}
+  let h='';
+  if((S.errs||[]).length)h+=`<div class="card warn">읽기 실패: ${esc(S.errs.join(' / '))}</div>`;
+  if(S.skipped)h+=`<div class="card warn">임시/지원 안 하는 파일 ${S.skipped}개를 제외했습니다.</div>`;
+  // 파일별 요약
+  const files=[...new Set(S.recs.map(r=>r.file))];
+  h+=`<div class="card"><span class="badge code">코드</span><h3>파일별 요약</h3><div class="scroll"><table><tr><th>파일</th><th class="n">응답 수</th><th class="n">전반</th><th class="n">목적</th><th class="n">강사</th><th class="n">난이도</th><th class="n">NPS</th><th>경고</th></tr>`;
+  files.forEach(fn=>{const rows=S.recs.filter(r=>r.file===fn),m=allMetrics(rows),w=[];
+    S.tables.filter(t=>t.sh.file===fn).forEach(t=>{const miss=['sat','goal','inst','diff','nps'].filter(f=>t.map[f]==null);if(miss.length)w.push('미매핑: '+miss.map(f=>LBL[f]).join(', '));w.push(...t.rep.warnings)});
+    h+=`<tr><td>${esc(fn)}</td><td class="n">${rows.length}</td>${F5.map(f=>`<td class="n">${f2(m[f].mean)}</td>`).join('')}<td class="n">${f2(m.nps.score)}</td><td class="warn">${esc(w.join(' · '))||'–'}</td></tr>`});
+  h+=`</table></div></div>`;
+  // 변환 확인
+  const need=F5.filter(f=>S.scale[f]&&(S.scale[f].hasTen||S.scale[f].text));
+  if(need.length){h+=`<div class="card"><span class="badge human">사람</span><h3>애매한 값 변환 확인</h3><p style="margin:0 0 8px;color:var(--mute)">10점 척도 → 5점: Y = 1 + 0.4×X (0~10점) 또는 Y = 1 + 4/9×(X−1) (1~10점), 소수점 둘째 자리 반올림. 체크를 바꾸면 즉시 재계산됩니다.</p>`;
+    need.forEach(f=>{const sc=S.scale[f];
+      if(sc.hasTen)h+=`<label style="display:block"><input type="checkbox" data-cv="${f}.ten" ${S.conv[f].ten?'checked':''}> <b>${LBL[f]}</b>: 최대 ${sc.max}점 감지 → 5점 척도로 환산 (${sc.min<1?'0~10점식':'1~10점식'})</label>`;
+      if(sc.text)h+=`<label style="display:block"><input type="checkbox" data-cv="${f}.text" ${S.conv[f].text?'checked':''}> <b>${LBL[f]}</b>: 글자 응답 ${sc.text}건('매우만족' 등) → 1~5점으로 환산</label>`});
+    h+=`</div>`}
+  const inv=Object.entries(S.invalid||{});if(inv.length)h+=`<div class="card warn">범위 밖/변환 불가 값 제외: ${inv.map(([f,n])=>LBL[f]+' '+n+'건').join(', ')}</div>`;
+  // 인식 리포트 카드
+  S.tables.forEach(t=>{const r=t.rep;
+    h+=`<div class="card"><span class="badge code">코드</span><h3>인식 리포트 · ${esc(r.file)}${r.sheet?' / '+esc(r.sheet):''}</h3>
+    <p style="margin:0 0 8px">머리글 ${r.headerRow}행 인식 (위 ${r.titleRows}행 제거) · 응답 ${t.rows.length}건 유지 · 제거: 빈 줄 ${r.removed.empty}, 합계/평균 줄 ${r.removed.summary}, 중복 ${r.removed.dup} · 개인정보 열 삭제: ${r.pii.length?esc(r.pii.join(', ')):'없음'} · 매핑: <span class="pill">${esc(t.mapSrc)}</span></p>
+    <div class="scroll"><table><tr><th>표준 항목</th><th>원본 열 이름</th></tr>${Object.keys(LBL).map(f=>`<tr><td>${LBL[f]}</td><td>${t.map[f]==null?'<span class="warn">매핑 안 됨</span>':esc(t.headers[t.map[f]])}</td></tr>`).join('')}</table></div></div>`});
+  box.innerHTML=h;
+  box.querySelectorAll('[data-cv]').forEach(cb=>cb.onchange=()=>{const[f,k]=cb.dataset.cv.split('.');S.conv[f][k]=cb.checked;recompute()});
+}
+function renderFilters(){
+  const el=$('#filters');el.innerHTML='';
+  ATTR.forEach(d=>{const vals=[...new Set(S.recs.map(r=>r[d]))].sort(nat);if(vals.length<2&&d!=='round')return;
+    const row=document.createElement('div');row.className='chips';row.innerHTML=`<b>${LBL[d]}</b>`;
+    vals.forEach(v=>{const c=document.createElement('span');c.className='chip'+(S.filters[d]?.has(v)?' on':'');c.textContent=v;
+      c.onclick=()=>{const s=S.filters[d]=S.filters[d]||new Set();s.has(v)?s.delete(v):s.add(v);renderAll()};row.appendChild(c)});
+    el.appendChild(row)});
+  const b=document.createElement('button');b.className='btn ghost';b.textContent='필터 초기화';b.onclick=()=>{S.filters={};renderAll()};el.appendChild(b);
+}
+function kpiBars(dist,n){return`<div class="bars">${[5,4,3,2,1].map(k=>`<div class="bar"><span>${k}점</span><i style="width:${n?dist[k]/n*100*0.8:0}%"></i><span>${n?(dist[k]/n*100).toFixed(0):0}%</span></div>`).join('')}</div>`}
+function renderDash(){
+  const rows=filtered(),m=allMetrics(rows);
+  let h=`<div class="kpi"><div class="t">총 응답 수</div><div class="v">${rows.length}</div><div class="s">전체 ${S.recs.length}건 중 · ${new Set(rows.map(r=>r.round)).size}개 차수</div></div>`;
+  F5.forEach(f=>{const s=m[f];h+=`<div class="kpi"><div class="t">${LBL[f]}</div><div class="v">${f2(s.mean)}</div><div class="s">긍정률(4~5점) ${pct(s.pos)} · n=${s.n}</div>${kpiBars(s.dist,s.n)}</div>`});
+  const n=m.nps;h+=`<div class="kpi"><div class="t">NPS</div><div class="v">${n.score==null?'–':n.score.toFixed(1)}</div><div class="s">추천 ${pct(n.prom)} − 비추천 ${pct(n.det)} · n=${n.n}</div><div class="bars">${[['추천(9~10)',n.prom],['중립(7~8)',n.pass],['비추천(0~6)',n.det]].map(([k,v])=>`<div class="bar"><span style="width:60px">${k.slice(0,2)}</span><i style="width:${(v||0)*80}%"></i><span>${pct(v)}</span></div>`).join('')}</div></div>`;
+  $('#kpis').innerHTML=h;
+  // 차트
+  const mk=(id,cfg)=>{charts[id]?.destroy();charts[id]=new Chart($('#'+id),cfg)};
+  const rounds=[...new Set(rows.map(r=>r.round))].sort(nat),COL=['#F26300','#1e3a8a','#64748b','#f59e0b'];
+  mk('cRound',{type:'bar',data:{labels:rounds,datasets:F5.map((f,i)=>({label:LBL[f],data:rounds.map(r=>{const s=stat(rows.filter(x=>x.round===r),f);return s.mean==null?null:+s.mean.toFixed(2)}),backgroundColor:COL[i]}))},options:{maintainAspectRatio:false,scales:{y:{min:1,max:5}}}});
+  const drawGroup=()=>{const d=$('#grpSel').value,gs=[...new Set(rows.map(r=>r[d]))].sort(nat);
+    mk('cGroup',{type:'bar',data:{labels:gs,datasets:[{label:'전반 만족도 평균',data:gs.map(g=>{const s=stat(rows.filter(r=>r[d]===g),'sat');return s.mean==null?null:+s.mean.toFixed(2)}),backgroundColor:'#F26300'}]},options:{indexAxis:'y',maintainAspectRatio:false,scales:{x:{min:1,max:5}},plugins:{legend:{display:false}}}})};
+  $('#grpSel').onchange=drawGroup;drawGroup();
+  mk('cDist',{type:'bar',data:{labels:['1점','2점','3점','4점','5점'],datasets:[{label:'응답 수',data:m.sat.dist.slice(1),backgroundColor:'#1e3a8a'}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+  mk('cNps',{type:'doughnut',data:{labels:['추천(9~10)','중립(7~8)','비추천(0~6)'],datasets:[{data:[m.nps.pc||0,(m.nps.n-m.nps.pc-m.nps.dc)||0,m.nps.dc||0],backgroundColor:['#F26300','#cbd5e1','#1e3a8a']}]},options:{maintainAspectRatio:false}});
+  // t-test
+  const pw=pairwise(rows);
+  $('#ttest').innerHTML=pw.length?`<table><tr><th>지표</th><th>비교</th><th class="n">평균 A</th><th class="n">평균 B</th><th class="n">평균 차이(A−B)</th><th class="n">t</th><th class="n">df</th><th class="n">p-value</th><th>유의성</th></tr>`+pw.map(x=>{const r=x.res;
+    return r?`<tr><td>${LBL[x.f]}</td><td>${esc(x.a)} vs ${esc(x.b)}</td><td class="n">${f2(r.m1)}</td><td class="n">${f2(r.m2)}</td><td class="n">${f2(r.m1-r.m2)}</td><td class="n">${r.t.toFixed(3)}</td><td class="n">${r.df.toFixed(1)}</td><td class="n">${r.p<0.001?'<0.001':r.p.toFixed(3)}</td><td class="${r.p<0.05?'sig':''}">${r.p<0.05?'차이 있음':'차이 없음'}</td></tr>`
+    :`<tr><td>${LBL[x.f]}</td><td>${esc(x.a)} vs ${esc(x.b)}</td><td colspan="7" class="warn">계산 불가 (표본 부족 또는 분산 0)</td></tr>`}).join('')+'</table>':'<p style="color:var(--mute)">비교할 차수가 2개 이상 필요합니다.</p>';
+}
+function renderOpen(){
+  const rows=filtered(),all={used:0,cnt:{긍정:0,부정:0,제안:0}};
+  const cards=OPEN.map(f=>{const st=openStats(rows,f);all.used+=st.used;for(const k in st.cnt)all.cnt[k]+=st.cnt[k];return cardOpen(LBL[f],st,S.ai.summary[f]||openSummaryText(st,f))});
+  cards.unshift(cardOpen('4개 문항 통합',{...all,excluded:null,quotes:null,topic:{}},S.ai.summary.all||`통합 유효 ${all.used}건 · 긍정 ${all.cnt.긍정}, 부정 ${all.cnt.부정}, 제안 ${all.cnt.제안}`));
+  $('#openCards').innerHTML=cards.join('');
+  const b=$('#openBadge');b.textContent=S.ai.model&&Object.keys(S.ai.labels).length?'AI 분류 · '+S.ai.model:'코드 규칙 분류';b.className='badge '+(S.ai.model&&Object.keys(S.ai.labels).length?'ai':'code');
+}
+function cardOpen(title,st,summary){
+  const u=st.used||1,c=st.cnt;
+  return`<div class="card"><h3>${esc(title)}</h3>
+  <div style="font-size:13px;margin-bottom:6px"><span class="pos">긍정 ${c.긍정}</span> · <span class="neg">부정 ${c.부정}</span> · 제안/기타 ${c.제안} <span style="color:var(--mute)">(유효 ${st.used}건${st.excluded!=null?', 빈칸·무응답 '+st.excluded+'건 제외':''})</span></div>
+  <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:#e2e8f0"><i style="width:${c.긍정/u*100}%;background:#15803d"></i><i style="width:${c.부정/u*100}%;background:#b91c1c"></i><i style="width:${c.제안/u*100}%;background:#94a3b8"></i></div>
+  <p style="margin:10px 0 6px">${esc(summary)}</p>
+  ${Object.entries(st.topic||{}).map(([k,v])=>`<span class="pill">${k} +${v.긍정}/−${v.부정}/제안 ${v.제안}</span>`).join('')}
+  ${st.quotes?['긍정','부정','제안'].map(l=>st.quotes[l].length?`<div style="margin-top:8px"><b style="font-size:12px">대표 의견 · ${l}</b>${st.quotes[l].map(q=>`<div class="quote">${esc(q)}</div>`).join('')}</div>`:'').join(''):''}</div>`;
+}
+/* AI 주관식 분류 */
+async function aiOpen(){
+  if(!$('#apiKey').value.trim()){alert('AI 설정에서 API Key를 입력하면 사용할 수 있습니다. (키 없이도 코드 규칙으로 분류됩니다)');return}
+  if(!confirm('주관식 응답 원문(최대 문항당 150건)이 Anthropic API로 전송됩니다. 개인정보가 포함되어 있지 않은지 확인하셨나요?'))return;
+  const rows=filtered();$('#btnAiOpen').disabled=true;$('#btnAiOpen').textContent='분석 중…';
+  try{
+    for(const f of OPEN){
+      const texts=[...new Set(rows.map(r=>String(r.raw[f]??'').trim()).filter(t=>!blank(t)))].slice(0,150);if(!texts.length)continue;
+      const out=jsonOf(await callAI('교육 설문 주관식 분류기. JSON만 출력.',`문항: ${LBL[f]}\n각 응답을 "긍정","부정","제안" 중 하나로 분류하고, 전체를 2문장 이내로 한국어 요약하세요. 출력: {"labels":[...응답 순서대로...],"summary":"..."}\n`+texts.map((t,i)=>`${i}. ${t}`).join('\n'),4000));
+      texts.forEach((t,i)=>{if(['긍정','부정','제안'].includes(out.labels?.[i]))S.ai.labels[t]=out.labels[i]});
+      if(out.summary)S.ai.summary[f]=out.summary;
+    }
+  }catch(e){alert('AI 호출 실패: '+e.message+'\n코드 규칙 분류를 유지합니다.')}
+  $('#btnAiOpen').disabled=false;$('#btnAiOpen').textContent='AI로 분류·요약 실행';renderAll();
+}
+
+/* ============ 데이터에게 묻기 ============ */
+function ctx(){
+  const rows=filtered(),m=allMetrics(rows),r2=x=>x==null?null:Math.round(x*100)/100;
+  const byRound={};[...new Set(rows.map(r=>r.round))].sort(nat).forEach(rd=>{const mm=allMetrics(rows.filter(r=>r.round===rd));byRound[rd]={응답수:mm.sat.n||rows.filter(r=>r.round===rd).length};F5.forEach(f=>byRound[rd][LBL[f]]=r2(mm[f].mean));byRound[rd].NPS=r2(mm.nps.score)});
+  const o={};OPEN.forEach(f=>{const s=openStats(rows,f);o[LBL[f]]={유효:s.used,긍정:s.cnt.긍정,부정:s.cnt.부정,제안:s.cnt.제안}});
+  return{응답수:rows.length,필터:Object.fromEntries(Object.entries(S.filters).filter(([,v])=>v.size).map(([k,v])=>[LBL[k],[...v]])),지표:Object.fromEntries(F5.map(f=>[LBL[f],{평균:r2(m[f].mean),긍정률_퍼센트:r2(m[f].pos*100)}])),NPS:{점수:r2(m.nps.score),추천_퍼센트:r2(m.nps.prom*100),비추천_퍼센트:r2(m.nps.det*100)},차수별:byRound,t검정:pairwise(rows).filter(x=>x.res).map(x=>({지표:LBL[x.f],비교:x.a+' vs '+x.b,t:r2(x.res.t),p:r2(x.res.p),유의:x.res.p<.05})),주관식:o};
+}
+function verifyNums(answer,c){
+  const pool=(JSON.stringify(c).match(/-?\d+(\.\d+)?/g)||[]).map(Number);
+  const bad=(answer.match(/\d+(\.\d+)?/g)||[]).map(Number).filter(x=>!pool.some(p=>Math.abs(p-x)<=0.011||Math.abs(p-x)<=0.51&&Number.isInteger(x)&&x>=10));
+  return bad;
+}
+function ruleAnswer(q,c){
+  const L=q.toLowerCase();
+  if(/nps|추천/.test(L))return`현재 집단의 NPS는 ${c.NPS.점수}점입니다 (추천 ${c.NPS.추천_퍼센트}%, 비추천 ${c.NPS.비추천_퍼센트}%).`;
+  const hit=[['목적',/목적|달성/],['강사',/강사|강의/],['난이도',/난이도|실습/],['전반',/전반|만족/]].find(([,re])=>re.test(L));
+  if(/응답/.test(L)&&!hit)return`현재 필터 기준 응답 수는 ${c.응답수}건입니다.`;
+  if(hit){const k=Object.keys(c.지표).find(n=>n.includes(hit[0]));
+    if(/낮|높|최고|최저|가장/.test(L)&&Object.keys(c.차수별).length>1){const arr=Object.entries(c.차수별).map(([r,v])=>[r,v[k]]).filter(x=>x[1]!=null).sort((a,b)=>a[1]-b[1]);const pick=/낮|최저/.test(L)?arr[0]:arr[arr.length-1];return`${k}가 ${/낮|최저/.test(L)?'가장 낮은':'가장 높은'} 차수는 ${pick[0]}(${pick[1]}점)입니다.`}
+    return`${k}는 평균 ${c.지표[k].평균}점, 긍정률 ${c.지표[k].긍정률_퍼센트}%입니다.`}
+  if(/유의|차이/.test(L)){const s=c.t검정.filter(x=>x.유의);return s.length?`유의한 차이: `+s.map(x=>`${x.지표} ${x.비교}(p=${x.p})`).join(', ')+'.':'유의한 차수 간 차이는 없습니다.'}
+  if(/긍정|부정|주관식/.test(L))return Object.entries(c.주관식).map(([k,v])=>`${k}: 긍정 ${v.긍정}, 부정 ${v.부정}, 제안 ${v.제안}`).join(' / ')+'.';
+  return'데이터에 없음';
+}
+async function ask(){
+  const q=$('#askQ').value.trim();if(!q)return;const c=ctx();let ans,src='코드 규칙';
+  $('#askOut').innerHTML='분석 중…';
+  if($('#apiKey').value.trim()){
+    try{ans=(await callAI('주어진 JSON 계산 결과만 근거로 한국어 3문장 이내로 답하세요. JSON에 없는 숫자는 절대 만들지 말고, 근거가 없으면 정확히 "데이터에 없음"이라고만 답하세요.',`데이터:\n${JSON.stringify(c)}\n\n질문: ${q}`,500)).trim();src='AI · '+S.ai.model}catch(e){ans=null}
+  }
+  if(ans==null)ans=ruleAnswer(q,c);
+  const bad=ans==='데이터에 없음'?[]:verifyNums(ans,c);
+  $('#askOut').innerHTML=`<div style="font-size:15px">${esc(ans)}</div><p style="margin:8px 0 0"><span class="pill">${esc(src)}</span> ${bad.length?`<span class="pill neg">⚠ 계산 결과와 불일치한 숫자: ${bad.join(', ')}</span>`:'<span class="pill pos">✔ 숫자 검증 통과</span>'}</p>`;
+}
+
+/* ============ 보고서 ============ */
+function insights(){
+  const rows=filtered(),m=allMetrics(rows),out=[];
+  const arr=F5.map(f=>[f,m[f].mean]).filter(x=>x[1]!=null).sort((a,b)=>b[1]-a[1]);
+  if(arr.length){out.push(`${LBL[arr[0][0]]}(${f2(arr[0][1])}점)가 가장 높고, ${LBL[arr[arr.length-1][0]]}(${f2(arr[arr.length-1][1])}점)가 가장 낮습니다.`)}
+  if(m.nps.score!=null)out.push(`NPS는 ${m.nps.score.toFixed(1)}점으로 ${m.nps.score>=50?'우수':m.nps.score>=0?'보통':'개선 필요'} 수준입니다.`);
+  const sig=pairwise(rows).filter(x=>x.res&&x.res.p<.05);
+  out.push(sig.length?`차수 간 유의한 차이: ${sig.slice(0,3).map(x=>`${LBL[x.f]} ${x.a} vs ${x.b}`).join(', ')}${sig.length>3?' 외':''}.`:'차수 간 통계적으로 유의한 차이는 확인되지 않았습니다.');
+  const sg=openStats(rows,'o4');if(sg.used)out.push(`보완점 응답 ${sg.used}건 중 ${openSummaryText(sg,'o4').replace(/^유효 \d+건 중 /,'')}`);
+  return out;
+}
+function bodyHTML(){
+  const rows=filtered(),m=allMetrics(rows),R=S.report,ins=S.insight||insights();
+  const th='style="border:1px solid #cbd5e1;padding:6px 10px;background:#f1f5f9;text-align:left"',td='style="border:1px solid #cbd5e1;padding:6px 10px"';
+  const pw=pairwise(rows).filter(x=>x.res);
+  return{rows,m,R,ins,th,td,pw};
+}
+function mailHTML(){
+  const {rows,m,R,ins,th,td,pw}=bodyHTML();
+  const op=OPEN.map(f=>{const s=openStats(rows,f);return`<tr><td ${td}>${LBL[f]}</td><td ${td}>${s.cnt.긍정}</td><td ${td}>${s.cnt.부정}</td><td ${td}>${s.cnt.제안}</td><td ${td}>${s.used}</td></tr>`}).join('');
+  return`<div style="font-family:'Malgun Gothic',Arial,sans-serif;color:#0f172a;max-width:720px;font-size:14px">
+<h2 style="border-left:6px solid #F26300;padding-left:10px;margin:0 0 10px">${esc(R.name||'교육')} 만족도 결과 보고</h2>
+<table style="border-collapse:collapse;width:100%;margin-bottom:14px"><tr><td ${th}>교육명</td><td ${td}>${esc(R.name)}</td><td ${th}>일시</td><td ${td}>${esc(R.date)}</td></tr><tr><td ${th}>강사</td><td ${td}>${esc(R.inst)}</td><td ${th}>운영</td><td ${td}>${esc(R.ops)}</td></tr><tr><td ${th}>보고자</td><td ${td}>${esc(R.by)}</td><td ${th}>응답 수</td><td ${td}>${rows.length}건</td></tr></table>
+<h3>1. 핵심 지표</h3>
+<table style="border-collapse:collapse;width:100%"><tr><th ${th}>지표</th><th ${th}>평균/점수</th><th ${th}>긍정률(4~5점)</th></tr>
+${F5.map(f=>`<tr><td ${td}>${LBL[f]}</td><td ${td}>${f2(m[f].mean)}</td><td ${td}>${pct(m[f].pos)}</td></tr>`).join('')}
+<tr><td ${td}>NPS</td><td ${td}>${m.nps.score==null?'–':m.nps.score.toFixed(1)}</td><td ${td}>추천 ${pct(m.nps.prom)} / 비추천 ${pct(m.nps.det)}</td></tr></table>
+<h3>2. 차수 간 비교 (Welch t-test, p&lt;0.05)</h3>
+${pw.length?`<table style="border-collapse:collapse;width:100%"><tr><th ${th}>지표</th><th ${th}>비교</th><th ${th}>평균 차이</th><th ${th}>p-value</th><th ${th}>판정</th></tr>${pw.map(x=>`<tr><td ${td}>${LBL[x.f]}</td><td ${td}>${esc(x.a)} vs ${esc(x.b)}</td><td ${td}>${f2(x.res.m1-x.res.m2)}</td><td ${td}>${x.res.p<0.001?'<0.001':x.res.p.toFixed(3)}</td><td ${td}>${x.res.p<0.05?'차이 있음':'차이 없음'}</td></tr>`).join('')}</table>`:'<p>비교 가능한 차수가 없습니다.</p>'}
+<h3>3. 주관식 분류</h3>
+<table style="border-collapse:collapse;width:100%"><tr><th ${th}>문항</th><th ${th}>긍정</th><th ${th}>부정</th><th ${th}>제안</th><th ${th}>유효</th></tr>${op}</table>
+<h3>4. 시사점</h3><ul>${ins.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`;
+}
+function slidesHTML(){
+  const {rows,m,R,ins,pw}=bodyHTML();const foot=n=>`<div class="foot"><span>${esc(R.name||'교육 만족도 결과')}</span><span>${n} / 4</span></div>`;
+  const sig=pw.filter(x=>x.res.p<.05);
+  return`<div class="slide"><h2>${esc(R.name||'교육 만족도 결과 보고')}</h2><table style="font-size:16px"><tr><td style="width:100px;color:#64748b">일시</td><td>${esc(R.date)}</td></tr><tr><td style="color:#64748b">강사</td><td>${esc(R.inst)}</td></tr><tr><td style="color:#64748b">운영</td><td>${esc(R.ops)}</td></tr><tr><td style="color:#64748b">보고자</td><td>${esc(R.by)}</td></tr><tr><td style="color:#64748b">응답 수</td><td>${rows.length}건</td></tr></table>${foot(1)}</div>
+<div class="slide"><h2>핵심 지표</h2><table style="font-size:16px"><tr><th>지표</th><th class="n">평균/점수</th><th class="n">긍정률</th></tr>${F5.map(f=>`<tr><td>${LBL[f]}</td><td class="n">${f2(m[f].mean)}</td><td class="n">${pct(m[f].pos)}</td></tr>`).join('')}<tr><td>NPS</td><td class="n">${m.nps.score==null?'–':m.nps.score.toFixed(1)}</td><td class="n">추천 ${pct(m.nps.prom)} / 비추천 ${pct(m.nps.det)}</td></tr></table>${foot(2)}</div>
+<div class="slide"><h2>차수 간 비교</h2>${sig.length?`<table style="font-size:14px"><tr><th>지표</th><th>비교</th><th class="n">평균 차이</th><th class="n">p-value</th></tr>${sig.slice(0,9).map(x=>`<tr><td>${LBL[x.f]}</td><td>${esc(x.a)} vs ${esc(x.b)}</td><td class="n">${f2(x.res.m1-x.res.m2)}</td><td class="n">${x.res.p<0.001?'<0.001':x.res.p.toFixed(3)}</td></tr>`).join('')}</table>`:'<p>유의한 차수 간 차이가 없습니다 (Welch t-test, p&lt;0.05). 총 '+pw.length+'개 쌍 검정.</p>'}${foot(3)}</div>
+<div class="slide"><h2>주관식 요약 · 시사점</h2><table style="font-size:14px"><tr><th>문항</th><th class="n">긍정</th><th class="n">부정</th><th class="n">제안</th></tr>${OPEN.map(f=>{const s=openStats(rows,f);return`<tr><td>${LBL[f]}</td><td class="n">${s.cnt.긍정}</td><td class="n">${s.cnt.부정}</td><td class="n">${s.cnt.제안}</td></tr>`}).join('')}</table><ul style="font-size:14px">${ins.map(i=>`<li>${esc(i)}</li>`).join('')}</ul>${foot(4)}</div>`;
+}
+function renderReport(){
+  if(!S.recs.length){$('#mailView').textContent='파일을 업로드하면 보고서가 생성됩니다.';$('#slideView').innerHTML='';return}
+  $('#mailView').innerHTML=mailHTML();$('#slideView').innerHTML=slidesHTML();$('#insightSrc').textContent='시사점: '+S.insightSrc;
+}
+async function aiInsight(){
+  if(!$('#apiKey').value.trim()){alert('API Key를 입력하면 AI 시사점을 생성합니다. (현재는 코드 규칙 시사점이 사용됩니다)');return}
+  try{const t=await callAI('교육 운영 보고서 작성 도우미. 주어진 JSON의 숫자만 사용하고 새 숫자를 만들지 마세요. 한국어 불릿 3~4개, 한 줄에 하나씩, 불릿 기호 없이 출력.',JSON.stringify(ctx()),600);
+    const lines=t.split('\n').map(s=>s.replace(/^[-•*\d.\s]+/,'').trim()).filter(Boolean).slice(0,4);
+    const c=ctx();if(lines.some(l=>verifyNums(l,c).length)){alert('AI 문장에 계산 결과와 다른 숫자가 있어 코드 규칙 시사점을 유지합니다.');return}
+    S.insight=lines;S.insightSrc='AI · '+S.ai.model;renderReport()}catch(e){alert('AI 호출 실패: '+e.message)}
+}
+
+/* ============ 샘플 ============ */
+function sampleSheets(){
+  const H=['이름','사번','차수','소속 부서(팀)를 알려주세요.','직군을 선택해주세요.','직책을 선택해주세요.','총 경력 연차를 선택해주세요.','이번 교육에 만족하시나요?','과정을 통해 달성하고자 했던 목적이 달성되었나요?','강사의 강의 스킬에 만족하셨나요?','과정의 내용 및 실습 난이도는 적절했나요?','동료에게 본 교육을 추천할 의향이 있나요? (0~10)','만족도를 그렇게 평가한 이유는 무엇인가요?','난이도를 그렇게 평가한 이유는 무엇인가요?','가장 좋았던 점은 무엇입니까?','보완되었으면 하는 점은 무엇입니까?'];
+  const depts=['생산팀','품질팀','R&D팀','영업팀'],jobs=['생산','연구','사무'],ranks=['사원','대리','팀장'],cars=['1~3년','4~7년','8년 이상'];
+  const rt=[['실무에 바로 도움이 되어 만족합니다','내용이 알찼고 강사 설명이 명확했습니다','시간이 부족해서 아쉬웠습니다'],['보통이었으나 일부 내용은 유익했습니다','난이도가 적절했습니다','실습이 어려워서 이해하기 힘들었습니다']];
+  const pk=a=>a[Math.floor(Math.random()*a.length)];let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+  const mk=(shift,n)=>{const rows=[['2026년 신입사원 교육 만족도 설문 결과'],[],H];
+    for(let i=0;i<n;i++){const b=()=>Math.max(1,Math.min(5,Math.round(3.6+shift+(rnd()-.5)*2.4)));
+      rows.push(['홍길동'+i,'E'+(1000+i),'',pk(depts),pk(jobs),pk(ranks),pk(cars),b(),b(),b(),b(),Math.max(0,Math.min(10,Math.round(7+shift*2+(rnd()-.5)*6))),
+        pk(['실무에 바로 도움이 되어 만족합니다','강의가 알찼고 재미있었습니다','내용이 어렵고 부족한 부분이 있었습니다','보통이었습니다']),pk(['난이도가 적절했습니다','실습이 어려워서 힘들었습니다','조금 쉬웠습니다','']),pk(['강사님의 설명이 명확하고 친절했습니다','실습 위주라 좋았습니다','교육자료가 체계적이었습니다']),pk(['실습 시간을 늘렸으면 좋겠습니다','교육자료를 사전에 공유해주세요','없음','시간이 짧아 아쉬웠습니다','네트워크 환경 개선이 필요합니다'])])}
+    rows.push(['합계/평균','','','','','','',3.6,3.6,3.6,3.6,7]);return rows};
+  return [['sample_1차.xlsx','1차',0],['sample_2차.xlsx','2차',.25],['sample_3차.xlsx','3차',-.15]].map(([f,s,sh])=>({file:f,sheet:s,multi:true,aoa:mk(sh,45+Math.floor(rnd()*20))}));
+}
+
+/* ============ 이벤트 ============ */
+const TITLES={data:'파일 업로드 · 인식',dash:'핵심 지표 · 차트',open:'주관식 AI 분류',ask:'데이터에게 묻기',report:'결과보고서'};
+$('#nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('section.tab').forEach(s=>s.classList.toggle('on',s.id==='tab-'+b.dataset.t));$('#hTitle').textContent=TITLES[b.dataset.t];if(b.dataset.t==='dash'&&S.recs.length)renderDash()};
+const drop=$('#drop'),fi=$('#file');
+drop.onclick=()=>fi.click();fi.onchange=()=>readFiles(fi.files);
+drop.ondragover=e=>{e.preventDefault();drop.classList.add('over')};drop.ondragleave=()=>drop.classList.remove('over');
+drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');readFiles(e.dataTransfer.files)};
+$('#btnSample').onclick=()=>ingest(sampleSheets(),0);
+$('#btnAiOpen').onclick=aiOpen;$('#askBtn').onclick=ask;$('#askQ').onkeydown=e=>{if(e.key==='Enter')ask()};
+$('#btnInsightAi').onclick=aiInsight;
+document.querySelectorAll('#repForm input').forEach(i=>i.oninput=()=>{S.report[i.dataset.k]=i.value;renderReport()});
+$('#btnCopy').onclick=async()=>{const h=mailHTML();try{await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([h],{type:'text/html'}),'text/plain':new Blob([$('#mailView').innerText],{type:'text/plain'})})]);alert('메일형 HTML을 복사했습니다. 메일 본문에 붙여넣으세요.')}catch{const r=document.createRange();r.selectNode($('#mailView'));const s=getSelection();s.removeAllRanges();s.addRange(r);document.execCommand('copy');s.removeAllRanges();alert('복사했습니다.')}};
+$('#btnPrint').onclick=()=>{let p=$('#printRoot');p.innerHTML=slidesHTML();document.body.classList.add('printing');window.print();document.body.classList.remove('printing')};
+</script>
+</body>
+</html>

@@ -47,7 +47,7 @@ export function StuffinessChart({ logs, today }: { logs: DailyHealthLog[]; today
         <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="최근 14일 명치 답답함 지수">
           {[1, 2, 3, 4, 5].map((v) => (
             <g key={v}>
-              <line x1={PAD.l} x2={W - PAD.r} y1={y(v)} y2={y(v)} className="grid" />
+              <line x1={PAD.l} x2={W - PAD.r} y1={y(v)} y2={y(v)} className={v === 4 ? 'grid thresh' : 'grid'} />
               {v % 2 === 1 && (
                 <text x={PAD.l - 6} y={y(v) + 3.5} className="axis" textAnchor="end">
                   {v}
@@ -113,6 +113,7 @@ export function StuffinessChart({ logs, today }: { logs: DailyHealthLog[]; today
       </div>
       <figcaption className="chart-legend">
         <span>막대 아래 = 전날 밤</span>
+        <span className="lg"><i className="sw sw-high" />붉은 막대 = 4 이상</span>
         {(['DEFENDED', 'SAFE_SUBSTITUTE', 'HEAVY_SNACK', 'NO_CRAVING'] as NightGroup[]).map((g) => (
           <span key={g} className="lg">
             <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">

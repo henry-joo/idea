@@ -1,6 +1,7 @@
-/* Layout: 한 손으로 쓰는 단일 컬럼(최대 640px) + 하단 탭. 청화백자 — 차가운 백자 바탕에 코발트 한 색, 판정은 의미색만. */
+/* Layout: 한 손으로 쓰는 단일 컬럼(최대 640px) + 하단 탭. 임상 계기판 — 카드 대신 가는 선으로 구역을 나누고, 맨 위 상태 띠가 오늘의 답을 말한다.
+   색: 차가운 백자 바탕 + 코발트 한 가지(행동·현재 위치), 판정색은 판정에만. 세리프(Hahmlet)는 상태 단어·체질명·상호에만. */
 :root {
-  --paper: #edf1f5;
+  --paper: #f3f6f9;
   --surface: #ffffff;
   --surface-2: #f5f7fa;
   --ink: #141c27;
@@ -130,18 +131,22 @@ body::before {
 h1,
 h2,
 h3 {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-weight: 700;
   line-height: 1.25;
   margin: 0;
   text-wrap: balance;
+  letter-spacing: -0.02em;
+}
+.serif {
+  font-family: var(--font-display);
   letter-spacing: -0.01em;
 }
 h1 {
-  font-size: var(--fs-2xl);
+  font-size: 1.7rem;
 }
 h2 {
-  font-size: var(--fs-lg);
+  font-size: 1.08rem;
 }
 h3 {
   font-size: var(--fs-xl);
@@ -213,14 +218,14 @@ b {
 .brand-mark {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
   background: var(--cobalt);
   color: var(--cobalt-ink);
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 .brand-name {
   font-family: var(--font-display);
@@ -231,12 +236,15 @@ b {
   font: inherit;
   font-size: var(--fs-sm);
   font-weight: 600;
-  color: var(--cobalt);
-  background: var(--cobalt-soft);
-  border: 0;
+  color: var(--ink-2);
+  background: transparent;
+  border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 5px 12px;
+  padding: 5px 12px 5px 10px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
 .app {
   max-width: 640px;
@@ -247,8 +255,8 @@ b {
 }
 .screen {
   display: grid;
-  gap: 16px;
-  padding-block: 20px 8px;
+  gap: 24px;
+  padding-block: 18px 8px;
 }
 .screen-head {
   display: grid;
@@ -298,6 +306,16 @@ b {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+.tab.is-on::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 26%;
+  right: 26%;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--cobalt);
+}
 .tab.is-on {
   color: var(--cobalt);
 }
@@ -314,11 +332,9 @@ b {
 /* ── 공통 블록 ─────────────────────────────────────── */
 .section {
   display: grid;
-  gap: 12px;
-  padding: 16px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r);
+  gap: 14px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
   min-width: 0;
 }
 .section-head {
@@ -347,7 +363,7 @@ b {
   gap: 4px;
 }
 .hero h1 {
-  font-size: 2.1rem;
+  font-size: 1.5rem;
 }
 .hanja {
   font-weight: 500;
@@ -411,7 +427,7 @@ b {
   justify-content: space-between;
   gap: 8px 12px;
   padding: 11px 14px;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: var(--fs-sm);
   border: 1px solid var(--line);
 }
@@ -645,27 +661,49 @@ textarea {
 }
 
 /* ── 오늘 ──────────────────────────────────────────── */
-.now-card {
+.state {
   display: grid;
   gap: 8px;
-  padding: 16px;
-  border-radius: var(--r);
-  background: var(--cobalt-soft);
+  padding: 18px 18px 16px;
+  border-radius: 16px;
+  background: var(--take-soft);
 }
-.now-card.is-hold {
+.state.is-hold {
   background: var(--hold-soft);
 }
-.now-head {
+.state-main {
   display: flex;
+  align-items: flex-end;
   justify-content: space-between;
-  align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
-.now-main {
-  font-size: var(--fs-lg);
+.state-word {
+  margin: 0;
+  font-size: clamp(2.8rem, 15vw, 3.8rem);
+  line-height: 1;
+  font-weight: 700;
+  color: var(--take);
+}
+.is-hold .state-word {
+  color: var(--hold);
+}
+.state-eta {
+  margin: 0;
+  display: grid;
+  justify-items: end;
+  line-height: 1.2;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.state-eta-n {
+  font-size: 1.35rem;
+  color: var(--ink);
+}
+.state-line {
+  font-size: var(--fs-md);
   line-height: 1.5;
 }
-.now-foot {
+.state-foot {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -679,15 +717,17 @@ textarea {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 2px 12px;
-  padding: 14px 16px;
-  border-radius: var(--r);
-  border: 1px solid var(--cobalt);
-  background: var(--surface);
-  color: var(--ink);
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 0;
+  background: var(--cobalt);
+  color: var(--cobalt-ink);
   cursor: pointer;
 }
 .next-card .kicker {
   grid-column: 1;
+  color: inherit;
+  opacity: 0.78;
 }
 .next-title {
   grid-column: 1;
@@ -697,15 +737,16 @@ textarea {
 }
 .next-sub {
   grid-column: 1;
-  color: var(--ink-2);
+  color: inherit;
+  opacity: 0.85;
   font-size: var(--fs-sm);
 }
 .next-arrow {
   grid-column: 2;
   grid-row: 1 / span 3;
   align-self: center;
-  color: var(--cobalt);
-  font-size: 1.4rem;
+  color: inherit;
+  font-size: 1.6rem;
 }
 .portion {
   display: flex;
@@ -727,10 +768,7 @@ textarea {
 /* 24시간 띠 */
 .tl {
   margin: 0;
-  padding: 14px 14px 12px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r);
+  padding: 0;
   display: grid;
   gap: 4px;
 }
@@ -770,11 +808,16 @@ textarea {
 }
 .tl-track {
   position: relative;
-  height: 26px;
-  border-radius: 7px;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
+  height: 40px;
+  margin-block: 6px;
+}
+.tl-bands {
+  position: absolute;
+  inset: 0;
   overflow: hidden;
+  border-radius: 9px;
+  background: var(--surface);
+  border: 1px solid var(--line);
 }
 .tl-night {
   position: absolute;
@@ -807,12 +850,29 @@ textarea {
 }
 .tl-now {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  margin-left: -1.5px;
+  top: -7px;
+  bottom: -7px;
+  width: 4px;
+  margin-left: -2px;
+  border-radius: 2px;
   background: var(--cobalt);
-  box-shadow: 0 0 0 2px var(--surface);
+  box-shadow: 0 0 0 2px var(--paper);
+}
+.tl-now::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--cobalt);
+}
+.sw.sw-now {
+  width: 4px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--cobalt);
 }
 .tl-legend {
   display: flex;
@@ -1054,10 +1114,7 @@ textarea {
   color: var(--skip);
 }
 .sticky-cta {
-  position: sticky;
-  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
-  padding-block: 10px 4px;
-  background: linear-gradient(to bottom, transparent, var(--paper) 35%);
+  padding-top: 8px;
 }
 .sticky-cta .btn {
   width: 100%;
@@ -1234,17 +1291,19 @@ textarea {
 .stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 0;
 }
 .stat {
   display: grid;
   align-content: start;
   gap: 2px;
   min-width: 0;
-  padding: 12px;
-  border-radius: var(--r);
-  background: var(--surface);
-  border: 1px solid var(--line);
+  padding: 2px 12px;
+  border-left: 1px solid var(--line);
+}
+.stat:first-child {
+  padding-left: 0;
+  border-left: 0;
 }
 .stat-label {
   font-size: var(--fs-xs);
@@ -1288,6 +1347,20 @@ textarea {
 }
 .chart .bar {
   fill: var(--cobalt);
+}
+.chart .bar.is-high {
+  fill: var(--skip);
+}
+.chart .grid.thresh {
+  stroke: var(--skip);
+  stroke-dasharray: 3 3;
+  opacity: 0.55;
+}
+.sw-high {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--skip);
 }
 .chart .bar.is-hover {
   fill: color-mix(in srgb, var(--cobalt) 75%, var(--ink));

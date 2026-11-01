@@ -27,17 +27,19 @@ export function Timeline24({ profile, nowMin }: { profile: UserProfile; nowMin: 
         ))}
       </div>
       <div className="tl-track">
-        <span className="tl-night" style={{ left: pct(NIGHT_START_MIN), width: pct(1440 - NIGHT_START_MIN) }} />
-        <span className="tl-night" style={{ left: 0, width: pct(NIGHT_END_MIN) }} />
-        {segs.map(([s, e, t], i) => (
-          <span key={`${t}-${i}`} className="tl-window" style={{ left: pct(s), width: pct(e - s) }} />
-        ))}
-        {windows.map((w) => (
-          <span key={w.medTime} className="tl-pin" style={{ left: pct(toMinutes(w.medTime)) }} />
-        ))}
-        {meals.map(([n, t]) => (
-          <span key={n} className="tl-meal" style={{ left: pct(toMinutes(t)) }} />
-        ))}
+        <div className="tl-bands">
+          <span className="tl-night" style={{ left: pct(NIGHT_START_MIN), width: pct(1440 - NIGHT_START_MIN) }} />
+          <span className="tl-night" style={{ left: 0, width: pct(NIGHT_END_MIN) }} />
+          {segs.map(([s, e, t], i) => (
+            <span key={`${t}-${i}`} className="tl-window" style={{ left: pct(s), width: pct(e - s) }} />
+          ))}
+          {windows.map((w) => (
+            <span key={w.medTime} className="tl-pin" style={{ left: pct(toMinutes(w.medTime)) }} />
+          ))}
+          {meals.map(([n, t]) => (
+            <span key={n} className="tl-meal" style={{ left: pct(toMinutes(t)) }} />
+          ))}
+        </div>
         <span className="tl-now" style={{ left: pct(nowMin) }}>
           <span className="sr-only">지금 {fromMinutes(nowMin)}</span>
         </span>
@@ -60,6 +62,7 @@ export function Timeline24({ profile, nowMin }: { profile: UserProfile; nowMin: 
         <span><i className="sw sw-window" />복약 ±60분: 한방차·유제품·과일 보류</span>
         <span><i className="sw sw-night" />야식 시간대 21:00–04:00</span>
         <span><i className="sw sw-meal" />식사·취침</span>
+        <span><i className="sw sw-now" />지금</span>
       </figcaption>
     </figure>
   );

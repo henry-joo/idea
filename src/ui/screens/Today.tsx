@@ -5,7 +5,7 @@ import { checkIntakeAt, medStatusAt, MED_CLASS_LABEL, RESTRICTED_CLASSES } from 
 import { dinnerCutoff } from '../../domain/meal/recommend';
 import { medAdvisories } from '../../domain/medication/drugs';
 import { isLateNight } from '../../domain/night/funnel';
-import { fromMinutes, toMinutes } from '../../domain/shared/time';
+import { forwardDiff, fromMinutes, toMinutes } from '../../domain/shared/time';
 import { Breathing478 } from '../components/Breathing478';
 import { Pill, Section, Toggle } from '../components/bits';
 import { Timeline24 } from '../components/Timeline24';
@@ -27,14 +27,21 @@ export function TodayScreen({ s }: { s: AppStore }) {
   const d = s.now;
 
   const next = nextAction(s);
+  const etaMin: number | null = check.allowed
+    ? status.upcoming && meds
+      ? forwardDiff(nowMin, status.upcoming.start)
+      : null
+    : check.nextAllowedAt
+      ? forwardDiff(nowMin, toMinutes(check.nextAllowedAt))
+      : null;
 
   return (
     <div className="screen">
       <header className="hero">
         <p className="kicker">
-          {d.getMonth() + 1}월 {d.getDate()}일 {WEEKDAY[d.getDay()]}요일 · {fromMinutes(nowMin)}
+          {d.getMonth() + 1}월 {d.getDate()}일 {WEEKDAY[d.getDay()]}요일 · <span className="mono">{fromMinutes(nowMin)}</span>
         </p>
-        <h1>
+        <h1 className="serif">
           {spec.label} <span className="hanja">{spec.hanja}</span>
         </h1>
         <p className="hero-sub">
@@ -55,28 +62,33 @@ export function TodayScreen({ s }: { s: AppStore }) {
         </button>
       )}
 
-      <section className={`now-card ${check.allowed ? '' : 'is-hold'}`}>
-        <div className="now-head">
-          <p className="kicker">지금 먹어도 되나</p>
-          {check.allowed ? <Pill tone="take">제한 없음</Pill> : <Pill tone="hold">복약 창</Pill>}
+      <section className={`state ${check.allowed ? 'is-ok' : 'is-hold'}`} aria-label="지금 먹어도 되나">
+        <p className="kicker">지금 한방차·유제품·과일</p>
+        <div className="state-main">
+          <p className="state-word serif">{check.allowed ? '가능' : '보류'}</p>
+          {etaMin !== null && (
+            <p className="state-eta">
+              <span className="mono state-eta-n">{etaMin >= 60 ? `${Math.floor(etaMin / 60)}시간 ${etaMin % 60}분` : `${etaMin}분`}</span>
+              <span>{check.allowed ? '뒤 제한 시작' : '뒤 가능'}</span>
+            </p>
+          )}
         </div>
-        {check.allowed ? (
-          <p className="now-main">
-            한방차·유제품·과일 모두 괜찮습니다.
-            {status.upcoming && meds && (
+        <p className="state-line">
+          {check.allowed ? (
+            status.upcoming && meds ? (
               <>
-                {' '}
-                다음 제한은 <b className="mono">{fromMinutes(status.upcoming.start)}</b>부터 ({status.upcoming.medTime} 복약).
+                다음 제한 <b className="mono">{fromMinutes(status.upcoming.start)}</b> · {status.upcoming.medTime} 복약 1시간 전부터
               </>
-            )}
-          </p>
-        ) : (
-          <p className="now-main">
-            <b className="mono">{check.window!.medTime}</b> 복약 전후 60분입니다.{' '}
-            {RESTRICTED_CLASSES.map((c) => MED_CLASS_LABEL[c]).join('·')}은 <b className="mono">{check.nextAllowedAt}</b>부터 드세요. 물은 미온수로.
-          </p>
-        )}
-        <p className="now-foot">
+            ) : (
+              '제한 없이 드셔도 됩니다.'
+            )
+          ) : (
+            <>
+              <b className="mono">{check.window!.medTime}</b> 복약 전후 60분입니다. <b className="mono">{check.nextAllowedAt}</b>부터 {RESTRICTED_CLASSES.map((c) => MED_CLASS_LABEL[c]).join('·')}을 드세요. 지금은 미온수만.
+            </>
+          )}
+        </p>
+        <p className="state-foot">
           <Pill tone="block">전역 금기</Pill> 커피·녹차 등 카페인, 자몽류
         </p>
       </section>

@@ -1,3 +1,4 @@
+import { mergeProfile, migrateLogs } from '../domain/log/migrate';
 import type { DailyHealthLog } from '../domain/log/types';
 import type { FunnelState } from '../domain/night/funnel';
 import type { UserProfile } from '../domain/profile/types';
@@ -13,6 +14,8 @@ export interface HealthRepository {
   saveLogs(logs: DailyHealthLog[]): void;
   loadFunnel(): FunnelState | null;
   saveFunnel(f: FunnelState | null): void;
+  loadNotifyOn(): boolean;
+  saveNotifyOn(on: boolean): void;
 }
 
 const PREFIX = 'sungi.v1.';
@@ -36,10 +39,19 @@ function write(key: string, value: unknown): void {
 }
 
 export const localRepository: HealthRepository = {
-  loadProfile: () => read<UserProfile>('profile'),
+  // v1로 저장된 데이터도 읽는 순간 v2 형태로 올린다 (AT-29)
+  loadProfile: () => {
+    const raw = read<unknown>('profile');
+    return raw ? mergeProfile(raw) : null;
+  },
   saveProfile: (p) => write('profile', p),
-  loadLogs: () => read<DailyHealthLog[]>('logs'),
+  loadLogs: () => {
+    const raw = read<unknown>('logs');
+    return Array.isArray(raw) ? migrateLogs(raw) : null;
+  },
   saveLogs: (logs) => write('logs', logs),
   loadFunnel: () => read<FunnelState>('funnel'),
   saveFunnel: (f) => write('funnel', f),
+  loadNotifyOn: () => read<boolean>('notify') === true,
+  saveNotifyOn: (on) => write('notify', on),
 };

@@ -195,13 +195,15 @@ describe('§3-4 구내식당 식판 시뮬레이터', () => {
     expect(scoreDish(getDish('soup_samgyetang'), noMeds).verdict).toBe('BLOCKED');
   });
 
-  it('전날 야식을 먹었으면 다음 날 아침만 50%', () => {
+  it('D2: 전날 일반 야식 50% · 대체식 75% · 방어 100%, 점심은 항상 100%', () => {
     const y: DailyHealthLog = { ...emptyLog('2026-10-31'), lateNightDefense: { cravingOccurred: true, teaTimer15MinCompleted: false, outcome: 'HEAVY_SNACK', fastingHoursToMorning: 8 } };
+    const withOutcome = (outcome: 'HEAVY_SNACK' | 'SAFE_SUBSTITUTE' | 'DEFENDED'): DailyHealthLog => ({ ...y, lateNightDefense: { ...y.lateNightDefense, outcome } });
     expect(portionFor('BREAKFAST', y).percent).toBe(50);
-    expect(portionFor('LUNCH', y).percent).toBe(100);
-    expect(portionFor('BREAKFAST', { ...y, lateNightDefense: { ...y.lateNightDefense, outcome: 'SAFE_SUBSTITUTE' } }).percent).toBe(50);
-    expect(portionFor('BREAKFAST', { ...y, lateNightDefense: { ...y.lateNightDefense, outcome: 'DEFENDED' } }).percent).toBe(100);
+    expect(portionFor('BREAKFAST', withOutcome('SAFE_SUBSTITUTE')).percent).toBe(75);
+    expect(portionFor('BREAKFAST', withOutcome('DEFENDED')).percent).toBe(100);
+    expect(portionFor('BREAKFAST', { ...y, lateNightDefense: { ...y.lateNightDefense, cravingOccurred: false } }).percent).toBe(100);
     expect(portionFor('BREAKFAST', null).percent).toBe(100);
+    for (const o of ['HEAVY_SNACK', 'SAFE_SUBSTITUTE', 'DEFENDED'] as const) expect(portionFor('LUNCH', withOutcome(o)).percent).toBe(100);
   });
 
   it('체질을 바꾸면 같은 식판의 판정이 바뀐다', () => {

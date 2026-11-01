@@ -10,6 +10,8 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 export default defineConfig(({ mode }) => {
   const artifact = mode === 'artifact';
   return {
+    // 상대 경로로 빌드해 어느 하위 경로(GitHub Pages 등)에 올려도 매니페스트·서비스 워커가 동작한다
+    base: './',
     plugins: artifact ? [viteSingleFile()] : [react()],
     esbuild: artifact
       ? { jsx: 'transform', jsxFactory: 'React.createElement', jsxFragment: 'React.Fragment', jsxInject: `import React from 'react'` }

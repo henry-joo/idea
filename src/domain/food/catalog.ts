@@ -140,6 +140,7 @@ const DEFS: Def[] = [
   { id: 'coix_tea', name: '율무차(무가당)', cat: 'TEA_SPICE', suit: 'CGBG', th: 'COOL', qi: 2, tags: ['HERBAL_TEA', 'DISCHARGING'] },
   { id: 'quince_tea', name: '모과차', cat: 'TEA_SPICE', suit: 'CCCB', th: 'WARM', qi: 3, tags: ['HERBAL_TEA'] },
   { id: 'maesil_tea', name: '매실차', cat: 'TEA_SPICE', suit: 'GGBG', th: 'NEUTRAL', qi: 3, tags: ['HERBAL_TEA', 'SUGAR'] },
+  { id: 'licorice_tea', name: '감초차', cat: 'TEA_SPICE', suit: 'GCCC', th: 'NEUTRAL', qi: 2, tags: ['HERBAL_TEA', 'LICORICE'], note: '감초는 장기·다량 복용 시 저칼륨혈증 우려(이뇨제·스테로이드 병용 주의)' },
   { id: 'coffee', name: '커피', cat: 'TEA_SPICE', suit: 'CCCC', th: 'WARM', qi: 2, med: true, tags: ['CAFFEINE'] },
   { id: 'green_tea', name: '녹차', cat: 'TEA_SPICE', suit: 'CCCC', th: 'COOL', qi: 2, med: true, tags: ['CAFFEINE'] },
 
@@ -151,6 +152,7 @@ const DEFS: Def[] = [
   { id: 'warm_water', name: '미온수', cat: 'BEVERAGE', suit: 'BBBB', th: 'NEUTRAL', qi: 2 },
   { id: 'cold_water', name: '찬물·얼음물', cat: 'BEVERAGE', suit: 'AGCG', th: 'COLD', qi: 1 },
   { id: 'barley_tea', name: '보리차', cat: 'BEVERAGE', suit: 'CBGG', th: 'COOL', qi: 2, note: '곡물차로 한방차 60분 제한 대상은 아님' },
+  { id: 'alcohol', name: '술(소주·맥주·와인)', cat: 'BEVERAGE', suit: 'CCCC', th: 'WARM', qi: 1, tags: ['ALCOHOL'], note: '자율신경 실조·수면 질 저하, 다수의 신경계 약과 병용 주의' },
   { id: 'sungnyung', name: '숭늉(누룽지차)', cat: 'BEVERAGE', suit: 'BGGG', th: 'WARM', qi: 3, tags: ['SODO'] },
 ];
 

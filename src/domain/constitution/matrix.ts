@@ -21,6 +21,8 @@ export type DishTag =
   | 'GLUTINOUS'
   | 'COLD_DISH'
   | 'FERMENTED'
+  | 'KIMCHI' // 신선·적당히 익은 김치: 기체증 소음인은 2~3조각만 (D4)
+  | 'SOUR_KIMCHI' // 신김치·묵은지·차가운 물김치: 기체증 소음인은 거르기 (D4)
   | 'DESSERT';
 
 /**

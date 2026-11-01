@@ -2,6 +2,8 @@ import { portionFor } from '../../domain/cafeteria/tray';
 import { CONSTITUTION_MATRIX, SUB_CONDITION_SPECS } from '../../domain/constitution/matrix';
 import { detectRedFlags } from '../../domain/log/insights';
 import { checkIntakeAt, medStatusAt, MED_CLASS_LABEL, RESTRICTED_CLASSES } from '../../domain/medication/safeguard';
+import { dinnerCutoff } from '../../domain/meal/recommend';
+import { medAdvisories } from '../../domain/medication/drugs';
 import { isLateNight } from '../../domain/night/funnel';
 import { fromMinutes, toMinutes } from '../../domain/shared/time';
 import { Breathing478 } from '../components/Breathing478';
@@ -21,6 +23,7 @@ export function TodayScreen({ s }: { s: AppStore }) {
   const portion = portionFor('BREAKFAST', s.yesterdayReal);
   const log = s.getLog(today);
   const flags = detectRedFlags(s.realLogs, today);
+  const advisories = medAdvisories(profile);
   const d = s.now;
 
   const next = nextAction(s);
@@ -44,6 +47,13 @@ export function TodayScreen({ s }: { s: AppStore }) {
           {f.message}
         </div>
       ))}
+
+      {advisories.length > 0 && (
+        <button type="button" className="banner banner-hold banner-btn" onClick={() => s.go('meds')}>
+          <span>사전에 없는 약이 있습니다: {advisories.map((a) => a.split(':')[0]).join(', ')}. 약사에게 확인하세요.</span>
+          <span aria-hidden="true">→</span>
+        </button>
+      )}
 
       <section className={`now-card ${check.allowed ? '' : 'is-hold'}`}>
         <div className="now-head">
@@ -125,7 +135,7 @@ export function TodayScreen({ s }: { s: AppStore }) {
 function PortionBowl({ percent }: { percent: number }) {
   return (
     <svg className="bowl" viewBox="0 0 64 44" role="img" aria-label={`밥 ${percent}%`}>
-      <path className="bowl-rice" d={percent === 50 ? 'M10 24 Q32 16 54 24 L54 26 L10 26Z' : 'M8 22 Q32 2 56 22 L56 26 L8 26Z'} />
+      <path className="bowl-rice" d={percent === 50 ? 'M10 24 Q32 16 54 24 L54 26 L10 26Z' : percent === 75 ? 'M9 23 Q32 9 55 23 L55 26 L9 26Z' : 'M8 22 Q32 2 56 22 L56 26 L8 26Z'} />
       <path className="bowl-body" d="M4 24 H60 Q58 42 32 42 Q6 42 4 24Z" />
     </svg>
   );
@@ -135,14 +145,21 @@ function nextAction(s: AppStore): { kicker: string; title: string; sub: string; 
   const { profile, nowMin } = s;
   const b = toMinutes(profile.routine.breakfast);
   const l = toMinutes(profile.routine.lunch);
+  const cutoff = toMinutes(dinnerCutoff(profile));
   if (isLateNight(nowMin)) {
     return { kicker: '야식 시간대', title: '배고프면 바로 먹지 말고 퍼널부터', sub: '따뜻한 차 → 15분 → 가짜 배고픔 판별', go: () => s.go('night') };
+  }
+  if (s.homeDay && nowMin < cutoff - 60) {
+    return { kicker: '쉬는 날 · 집밥', title: '오늘 식사 추천 보기', sub: '아침·점심·저녁을 같은 규칙으로 추천합니다', go: () => s.go('dinner') };
   }
   if (profile.mealEnvironment.breakfast === 'CAFETERIA' && nowMin < b + 60) {
     return { kicker: `아침 ${profile.routine.breakfast} · 구내식당`, title: '아침 식판 거르기', sub: '메뉴판을 붙여 넣으면 담을 것과 거를 것을 나눠 드립니다', go: () => { s.setTrayMeal('BREAKFAST'); s.go('tray'); } };
   }
   if (profile.mealEnvironment.lunch === 'CAFETERIA' && nowMin < l + 60) {
     return { kicker: `점심 ${profile.routine.lunch} · 구내식당`, title: '점심 식판 거르기', sub: '후식 과일·요구르트는 복약 창을 같이 확인합니다', go: () => { s.setTrayMeal('LUNCH'); s.go('tray'); } };
+  }
+  if (profile.mealEnvironment.dinner !== 'SKIP' && nowMin < cutoff) {
+    return { kicker: `저녁 마감 ${dinnerCutoff(profile)}`, title: '저녁 메뉴 추천', sub: '밥·국·단백질·익힌 채소 조합과 야식 예방 안내', go: () => s.go('dinner') };
   }
   return { kicker: '하루 마무리', title: '오늘 명치 상태 기록하기', sub: '내일 아침 식사량과 주간 분석에 쓰입니다', go: () => s.go('log') };
 }

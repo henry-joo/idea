@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { evaluateTray, SAMPLE_MENUS, type MealSlot, type TrayFinal, type TrayItem } from '../../domain/cafeteria/tray';
 import { getFood } from '../../domain/food/catalog';
 import { isHHMM } from '../../domain/shared/time';
-import { RuleTrace, Section, Seg, TrayPill } from '../components/bits';
+import { Pill, RuleTrace, Section, Seg, TrayPill } from '../components/bits';
 import type { AppStore } from '../store';
 
 const GROUPS: { key: TrayFinal[]; title: string; empty: string }[] = [
@@ -33,7 +33,7 @@ export function TrayScreen({ s }: { s: AppStore }) {
     s.upsertLog(s.today, (l) => ({
       ...l,
       cafeteriaFilterLog: {
-        morningPortionReduced: meal === 'BREAKFAST' ? plan.portion.percent === 50 : l.cafeteriaFilterLog.morningPortionReduced,
+        morningPortion: meal === 'BREAKFAST' ? plan.portion.percent : l.cafeteriaFilterLog.morningPortion,
         avoidedColdSaladAndPork: true,
         includedRadishOrWarmSoup: l.cafeteriaFilterLog.includedRadishOrWarmSoup || plan.hasWarmSoupOrRadish,
       },
@@ -96,17 +96,23 @@ export function TrayScreen({ s }: { s: AppStore }) {
       </div>
 
       {meal === 'BREAKFAST' && (
-        <div className={`banner ${plan.portion.percent === 50 ? 'banner-little' : 'banner-take'}`}>
+        <div className={`banner ${plan.portion.percent === 100 ? 'banner-take' : 'banner-little'}`}>
           <span>
             <b>아침 {plan.portion.percent}%</b> · {plan.portion.reason}
           </span>
         </div>
       )}
 
-      <TrayBoard items={plan.items} halfRice={plan.portion.percent === 50} />
+      <TrayBoard items={plan.items} ricePercent={plan.portion.percent} />
 
       {plan.unknown.length > 0 && (
         <p className="banner banner-info">판별하지 못한 메뉴: {plan.unknown.join(', ')}. 주재료를 함께 적어 주세요 (예: “오늘의특선(돼지고기)”).</p>
+      )}
+
+      {s.homeDay && (
+        <p className="banner banner-info">
+          오늘은 {s.profile.holidayDates.includes(s.today) ? '쉬는 날로 표시한 날' : '주말'}입니다. 집밥 추천은 ‘저녁’ 탭에서 아침·점심도 볼 수 있습니다.
+        </p>
       )}
 
       {GROUPS.map((g) => {
@@ -149,6 +155,7 @@ function DishRow({ item }: { item: TrayItem }) {
         <summary>
           <span className="dish-name">{item.dish.name}</span>
           <TrayPill v={item.final} />
+          {item.result.needsVerification && <span className="dish-verify">약사 확인 필요</span>}
           <span className="dish-why">{item.final === 'HOLD' && item.holdUntil ? `${item.holdUntil}부터 · ` : ''}{item.headline}</span>
         </summary>
         <div className="dish-detail">
@@ -157,6 +164,11 @@ function DishRow({ item }: { item: TrayItem }) {
             {item.dish.note && <> · {item.dish.note}</>}
           </p>
           <RuleTrace hits={item.result.hits} />
+          {item.result.drugNotes.map((n) => (
+            <p key={`${n.drugName}-${n.reason}`} className="small drug-note">
+              <b>{n.drugName}</b> · {n.reason} <span className="muted">(출처: {n.source})</span> {!n.verified && <Pill tone="hold">약사 확인 필요</Pill>}
+            </p>
+          ))}
           {item.result.ingredientScores.length > 1 &&
             item.result.ingredientScores.map((sc) => (
               <details key={sc.foodId} className="sub-trace">
@@ -174,7 +186,7 @@ function DishRow({ item }: { item: TrayItem }) {
 }
 
 /** 담기·조금만 판정 반찬을 실제 식판 칸에 배치해 보여 준다 */
-function TrayBoard({ items, halfRice }: { items: TrayItem[]; halfRice: boolean }) {
+function TrayBoard({ items, ricePercent }: { items: TrayItem[]; ricePercent: number }) {
   const ok = items.filter((i) => i.final === 'TAKE' || i.final === 'LITTLE');
   const take = (pred: (i: TrayItem) => boolean) => {
     const idx = ok.findIndex(pred);
@@ -191,7 +203,7 @@ function TrayBoard({ items, halfRice }: { items: TrayItem[]; halfRice: boolean }
     <div className={`tray-cell ${item ? (item.final === 'LITTLE' ? 'is-little' : 'is-take') : 'is-empty'}`} style={{ gridArea: area }}>
       <span className="tray-name">{item ? item.dish.name : fallback}</span>
       {item?.final === 'LITTLE' && <span className="tray-mark">조금</span>}
-      {area === 'rice' && item && halfRice && <span className="tray-mark">반 공기</span>}
+      {area === 'rice' && item && ricePercent !== 100 && <span className="tray-mark">{ricePercent === 50 ? '반 공기' : '3/4 공기'}</span>}
     </div>
   );
 

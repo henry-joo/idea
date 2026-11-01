@@ -8,10 +8,13 @@ export const DEFAULT_PROFILE: UserProfile = {
     parasympatheticLow: true,
     takingWesternMeds: true,
     medSchedules: ['08:30', '13:00', '21:30'],
+    medications: [],
   },
   mealEnvironment: {
     breakfast: 'CAFETERIA',
     lunch: 'CAFETERIA',
+    dinner: 'HOME',
+    weekendMode: 'HOME',
     lateNightHabit: 'FREQUENT',
   },
   routine: {
@@ -20,6 +23,7 @@ export const DEFAULT_PROFILE: UserProfile = {
     dinner: '19:00',
     bedtime: '23:30',
   },
+  holidayDates: [],
 };
 
 /** 체질을 바꿀 때 제안하는 기본 병리 상태 */

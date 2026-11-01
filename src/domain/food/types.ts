@@ -32,7 +32,9 @@ export type FoodTag =
   | 'CLEARING_HEAT' // 청열
   | 'NOURISH_YIN' // 보음 (소양인 신음 / 태양인 간음)
   | 'DISCHARGING' // 발산·배출 (태음인)
-  | 'SHELLFISH';
+  | 'SHELLFISH'
+  | 'LICORICE' // 감초: 이뇨제·스테로이드와 병용 시 저칼륨 우려
+  | 'ALCOHOL';
 
 /** 명세 §5-2 SasangFoodItem (필드 그대로) + tags/note 확장 */
 export interface SasangFoodItem {

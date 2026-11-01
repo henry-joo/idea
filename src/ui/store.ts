@@ -4,6 +4,7 @@ import { exampleLogs } from '../domain/log/examples';
 import { emptyLog, type DailyHealthLog } from '../domain/log/types';
 import type { FunnelState } from '../domain/night/funnel';
 import { DEFAULT_PROFILE } from '../domain/profile/defaults';
+import { isHomeDay } from '../domain/meal/recommend';
 import type { UserProfile } from '../domain/profile/types';
 import { addDays, isoDate, nowMinutes } from '../domain/shared/time';
 import { localRepository as repo } from '../infra/storage';
@@ -21,6 +22,12 @@ export interface AppStore {
   /** 기록 수정. 첫 실제 기록이 저장되면 예시는 사라진다 */
   upsertLog: (date: string, update: (l: DailyHealthLog) => DailyHealthLog) => void;
   clearExamples: () => void;
+  /** 백업 복원: 프로필과 실제 기록을 통째로 바꾼다 */
+  replaceData: (profile: UserProfile, logs: DailyHealthLog[]) => void;
+  /** 오늘이 주말·쉬는 날이라 아침·점심도 집밥인가 */
+  homeDay: boolean;
+  notifyOn: boolean;
+  setNotifyOn: (on: boolean) => void;
   funnel: FunnelState | null;
   setFunnel: (f: FunnelState | null) => void;
   now: Date;
@@ -33,15 +40,13 @@ export interface AppStore {
   setTrayMeal: (m: MealSlot) => void;
 }
 
-function mergeProfile(saved: UserProfile | null): UserProfile {
-  if (!saved) return DEFAULT_PROFILE;
-  return {
-    ...DEFAULT_PROFILE,
-    ...saved,
-    autonomicStatus: { ...DEFAULT_PROFILE.autonomicStatus, ...saved.autonomicStatus },
-    mealEnvironment: { ...DEFAULT_PROFILE.mealEnvironment, ...saved.mealEnvironment },
-    routine: { ...DEFAULT_PROFILE.routine, ...(saved.routine ?? {}) },
-  };
+const FUNNEL_MAX_AGE_MS = 8 * 60 * 60_000;
+
+/** 오래된 야식 퍼널(어제 밤 등)은 이어서 보여 주지 않는다. 타이머는 시작 후 15분 시점(timerEndsAtMs)이 기준 */
+function freshFunnel(f: FunnelState | null): FunnelState | null {
+  if (!f) return null;
+  if (f.timerEndsAtMs === null) return null;
+  return Date.now() - f.timerEndsAtMs > FUNNEL_MAX_AGE_MS ? null : f;
 }
 
 export function useAppStore(): AppStore {
@@ -50,9 +55,10 @@ export function useAppStore(): AppStore {
   const nowMin = nowMinutes(now);
   const [route, go] = useHashRoute();
 
-  const [profile, setProfileState] = useState<UserProfile>(() => mergeProfile(repo.loadProfile()));
+  const [profile, setProfileState] = useState<UserProfile>(() => repo.loadProfile() ?? DEFAULT_PROFILE);
   const [logs, setLogs] = useState<DailyHealthLog[]>(() => repo.loadLogs() ?? exampleLogs(isoDate()));
-  const [funnel, setFunnelState] = useState<FunnelState | null>(() => repo.loadFunnel());
+  const [funnel, setFunnelState] = useState<FunnelState | null>(() => freshFunnel(repo.loadFunnel()));
+  const [notifyOn, setNotifyOnState] = useState<boolean>(() => repo.loadNotifyOn());
   const [trayMeal, setTrayMeal] = useState<MealSlot>(() => (nowMinutes() < 10 * 60 ? 'BREAKFAST' : 'LUNCH'));
 
   useEffect(() => repo.saveLogs(logs), [logs]);
@@ -65,6 +71,19 @@ export function useAppStore(): AppStore {
     setFunnelState(f);
     repo.saveFunnel(f);
   }, []);
+
+  const setNotifyOn = useCallback((on: boolean) => {
+    setNotifyOnState(on);
+    repo.saveNotifyOn(on);
+  }, []);
+
+  const replaceData = useCallback(
+    (p: UserProfile, l: DailyHealthLog[]) => {
+      setProfile(p);
+      setLogs(l.length ? l : []);
+    },
+    [setProfile],
+  );
 
   const realLogs = useMemo(() => logs.filter((l) => !l.isExample), [logs]);
   const showingExamples = logs.length > 0 && realLogs.length === 0;
@@ -97,6 +116,10 @@ export function useAppStore(): AppStore {
     getLog,
     upsertLog,
     clearExamples,
+    replaceData,
+    homeDay: isHomeDay(profile, today),
+    notifyOn,
+    setNotifyOn,
     funnel,
     setFunnel,
     now,

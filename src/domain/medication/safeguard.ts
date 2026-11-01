@@ -21,11 +21,16 @@ export interface MedWindow {
   label: string;
 }
 
+/** 기본 복약 시각 + 약 목록에 적은 시각을 합친 하루 복약 시각 (중복 제거, 정렬) */
+export function effectiveMedTimes(profile: UserProfile): HHMM[] {
+  if (!profile.autonomicStatus.takingWesternMeds) return [];
+  const all = [...profile.autonomicStatus.medSchedules, ...(profile.autonomicStatus.medications ?? []).flatMap((m) => m.times)];
+  return [...new Set(all)].sort((a, b) => toMinutes(a) - toMinutes(b));
+}
+
 /** 복약 시각마다 [t-60, t+60] 제한 창을 만든다. */
 export function medWindows(profile: UserProfile): MedWindow[] {
-  if (!profile.autonomicStatus.takingWesternMeds) return [];
-  return [...profile.autonomicStatus.medSchedules]
-    .sort((a, b) => toMinutes(a) - toMinutes(b))
+  return effectiveMedTimes(profile)
     .map((t) => {
       const m = toMinutes(t);
       const start = m - MED_BUFFER_MIN;

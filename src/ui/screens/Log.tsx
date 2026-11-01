@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { computeInsights, detectRedFlags, NIGHT_GROUP_LABEL } from '../../domain/log/insights';
-import type { DailyHealthLog, NightOutcome, Scale5 } from '../../domain/log/types';
+import type { DailyHealthLog, DinnerAmount, NightOutcome, Scale5 } from '../../domain/log/types';
 import { FASTING_TARGET_HOURS } from '../../domain/night/funnel';
 import { addDays } from '../../domain/shared/time';
 import { Section, Seg, Toggle } from '../components/bits';
@@ -123,9 +123,40 @@ export function LogScreen({ s }: { s: AppStore }) {
 
       <Section title="구내식당">
         <div className="stack">
-          <Toggle id="lg-portion" checked={log.cafeteriaFilterLog.morningPortionReduced} onChange={(v) => up((l) => ({ ...l, cafeteriaFilterLog: { ...l.cafeteriaFilterLog, morningPortionReduced: v } }))} label="전날 야식 후 아침 50% 감량" />
+          <div className="field">
+            <span className="field-label">오늘 아침 식사량 (전날 야식 기준 50·75·100)</span>
+            <Seg<'100' | '75' | '50'>
+              id="lg-portion"
+              label="아침 식사량"
+              value={String(log.cafeteriaFilterLog.morningPortion) as '100' | '75' | '50'}
+              onChange={(v) => up((l) => ({ ...l, cafeteriaFilterLog: { ...l.cafeteriaFilterLog, morningPortion: Number(v) as 100 | 75 | 50 } }))}
+              options={[
+                { value: '100', label: '100%' },
+                { value: '75', label: '75%' },
+                { value: '50', label: '50%' },
+              ]}
+            />
+          </div>
           <Toggle id="lg-avoid" checked={log.cafeteriaFilterLog.avoidedColdSaladAndPork} onChange={(v) => up((l) => ({ ...l, cafeteriaFilterLog: { ...l.cafeteriaFilterLog, avoidedColdSaladAndPork: v } }))} label="찬 샐러드·돼지고기·튀김 거름" />
           <Toggle id="lg-radish" checked={log.cafeteriaFilterLog.includedRadishOrWarmSoup} onChange={(v) => up((l) => ({ ...l, cafeteriaFilterLog: { ...l.cafeteriaFilterLog, includedRadishOrWarmSoup: v } }))} label="익힌 무·따뜻한 국물 먹음" />
+        </div>
+      </Section>
+
+      <Section title="저녁">
+        <div className="stack">
+          <Seg<DinnerAmount>
+            id="lg-dinner"
+            label="저녁 양"
+            value={log.dinnerLog.amount}
+            onChange={(v) => up((l) => ({ ...l, dinnerLog: { ...l.dinnerLog, amount: v, eatenAt: v === 'SKIPPED' ? null : l.dinnerLog.eatenAt ?? s.profile.routine.dinner } }))}
+            options={[
+              { value: 'SKIPPED', label: '거름' },
+              { value: 'LIGHT', label: '가볍게' },
+              { value: 'NORMAL', label: '보통' },
+              { value: 'HEAVY', label: '많이' },
+            ]}
+          />
+          <Toggle id="lg-cutoff" checked={log.dinnerLog.finishedBeforeCutoff} onChange={(v) => up((l) => ({ ...l, dinnerLog: { ...l.dinnerLog, finishedBeforeCutoff: v } }))} label="취침 3시간 전까지 마침" />
         </div>
       </Section>
 

@@ -1,7 +1,8 @@
 import { CONSTITUTION_MATRIX } from '../constitution/matrix';
 import { getFood } from '../food/catalog';
 import { medWindowClassOf, type MedWindowClass } from '../food/types';
-import { ateLateNight, type DailyHealthLog } from '../log/types';
+import { morningPortionAfter, type DailyHealthLog, type MorningPortion } from '../log/types';
+import { separationHold } from '../medication/drugs';
 import { checkIntakeAt } from '../medication/safeguard';
 import type { Constitution, UserProfile } from '../profile/types';
 import { scoreDish, type Dish, type DishScore } from '../scoring/dish';
@@ -24,7 +25,7 @@ export interface TrayItem {
 }
 
 export interface PortionGuide {
-  percent: 100 | 50;
+  percent: MorningPortion;
   reason: string;
 }
 
@@ -40,21 +41,18 @@ export interface TrayPlan {
 }
 
 /**
- * 명세 §3-4: 전날 야식(대체식 포함)을 먹었다면 다음 날 회사 아침 식사량 50%.
- * 점심은 감량하지 않는다.
+ * D2: 전날 밤 결과로 다음 날 **아침** 식사량을 정한다.
+ *   일반 야식 50% · 대체식(누룽지·계란찜 등) 75% · 방어 성공·야식 없음 100%. 점심은 줄이지 않는다.
  */
 export function portionFor(meal: MealSlot, yesterday: DailyHealthLog | null | undefined): PortionGuide {
-  if (meal === 'BREAKFAST' && ateLateNight(yesterday)) {
-    const h = yesterday!.lateNightDefense.fastingHoursToMorning;
-    return {
-      percent: 50,
-      reason: `어젯밤 야식으로 공복 ${h}시간. 위가 아직 비지 않았으니 아침은 평소의 절반만`,
-    };
+  if (meal === 'BREAKFAST') {
+    const p = morningPortionAfter(yesterday);
+    const h = yesterday?.lateNightDefense.fastingHoursToMorning;
+    if (p === 50) return { percent: 50, reason: `어젯밤 일반 야식으로 공복 ${h}시간. 위가 아직 비지 않았으니 아침은 평소의 절반만` };
+    if (p === 75) return { percent: 75, reason: `어젯밤 가벼운 대체식을 드셨습니다 (공복 ${h}시간). 아침은 평소의 3/4 정도로` };
+    return { percent: 100, reason: '어젯밤 공복을 지켰습니다. 평소 양으로 드세요' };
   }
-  return {
-    percent: 100,
-    reason: meal === 'BREAKFAST' ? '어젯밤 공복을 지켰습니다. 평소 양으로 드세요' : '점심은 평소 양. 대신 천천히',
-  };
+  return { percent: 100, reason: '점심은 평소 양. 대신 천천히' };
 }
 
 const EATING_ORDER: Record<Constitution, string[]> = {
@@ -113,6 +111,18 @@ export function evaluateDishAt(
         break;
       }
     }
+    // 약물별 간격(SEPARATE): 약마다 정한 n분 안이면 보류
+    if (final !== 'HOLD') {
+      for (const i of dish.ingredients) {
+        const sep = separationHold(profile, getFood(i.foodId), atMin);
+        if (!sep.allowed) {
+          final = 'HOLD';
+          holdUntil = sep.nextAllowedAt ?? undefined;
+          headline = sep.reason ?? headline;
+          break;
+        }
+      }
+    }
   }
   return { result, final, ...(holdUntil ? { holdUntil } : {}), headline };
 }
@@ -145,7 +155,7 @@ export function evaluateTray(input: TrayInput): TrayPlan {
   }
   const rice = CONSTITUTION_MATRIX[profile.constitution].cafeteria.riceGuide;
   const order = EATING_ORDER[profile.constitution].map((s) =>
-    s.startsWith('밥') && portion.percent === 50 ? `${s} (평소의 절반)` : s,
+    s.startsWith('밥') && portion.percent !== 100 ? `${s} (평소의 ${portion.percent === 50 ? '절반' : '3/4'})` : s,
   );
 
   return {

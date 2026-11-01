@@ -22,6 +22,7 @@ import {
   timerRemainingMs,
   type FunnelState,
 } from '../../domain/night/funnel';
+import type { DinnerAmount } from '../../domain/log/types';
 import { Breathing478 } from '../components/Breathing478';
 import { Pill, Section } from '../components/bits';
 import type { AppStore } from '../store';
@@ -89,7 +90,7 @@ export function NightScreen({ s }: { s: AppStore }) {
 
       {funnel && funnel.step !== 'DONE' && <Stepper current={funnel.step === 'WARM_DRINK' ? 0 : funnel.step === 'HUNGER_CHECK' ? 1 : 2} />}
 
-      {funnel?.step === 'WARM_DRINK' && <StepDrink f={funnel} now={tick} onNext={() => s.setFunnel(finishWaiting(funnel, Date.now()))} />}
+      {funnel?.step === 'WARM_DRINK' && <StepDrink f={funnel} now={tick} onNext={() => s.setFunnel(finishWaiting(funnel, Date.now(), recordedDinner(s, funnel)))} />}
 
       {funnel?.step === 'HUNGER_CHECK' && <StepHunger f={funnel} onSubmit={(a) => s.setFunnel(submitHungerCheck(funnel, a))} />}
 
@@ -106,6 +107,13 @@ export function NightScreen({ s }: { s: AppStore }) {
       {funnel?.step === 'DONE' && <Done s={s} f={funnel} />}
     </div>
   );
+}
+
+/** 그 밤에 해당하는 저녁 기록. 사용자가 실제로 남기지 않았으면(기본값 NORMAL) undefined */
+function recordedDinner(s: AppStore, f: FunnelState): DinnerAmount | undefined {
+  const l = s.realLogs.find((x) => x.date === nightLogDate(s.today, f.startedAtMin));
+  if (!l) return undefined;
+  return l.dinnerLog.eatenAt !== null || l.dinnerLog.amount === 'SKIPPED' ? l.dinnerLog.amount : undefined;
 }
 
 function Stepper({ current }: { current: number }) {
@@ -192,6 +200,9 @@ function StepSubstitute({ s, f, onDefend, onPick, onHeavy }: { s: AppStore; f: F
   const [showFood, setShowFood] = useState(!fake);
   return (
     <>
+      {f.skippedHungerCheck && (
+        <p className="banner banner-hold">오늘 저녁을 거르거나 적게 드셨다고 기록되어 있어 가짜 배고픔 판별은 건너뛰었습니다. 진짜 허기일 가능성이 높으니 가벼운 대체식으로 채우세요.</p>
+      )}
       {fake && (
         <Section kicker="Step 3 · 판정" title="가짜 배고픔일 가능성이 높습니다">
           <p>몸이 원하는 건 음식보다 긴장 해소입니다. 아래 중 두 가지를 하고 자리를 정리하세요.</p>

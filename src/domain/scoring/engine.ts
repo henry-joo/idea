@@ -8,6 +8,8 @@ import {
   type Suitability,
   type ThermalNature,
 } from '../food/types';
+import { drugNotesFor } from '../medication/drugs';
+import type { DrugNote } from '../medication/types';
 import type { UserProfile } from '../profile/types';
 
 export type Verdict = 'BEST' | 'GOOD' | 'CAUTION' | 'AVOID' | 'BLOCKED';
@@ -31,6 +33,10 @@ export interface FoodScore {
   blocked: boolean;
   effectiveThermal: ThermalNature;
   hits: RuleHit[];
+  /** 약물 사전에서 걸린 규칙 (H6). 출처와 검증 여부를 함께 보여 준다 */
+  drugNotes: DrugNote[];
+  /** 미검증 약물 규칙이 하나라도 걸렸으면 true → 화면에 "약사 확인 필요" */
+  needsVerification: boolean;
 }
 
 export const BASE_SCORE: Record<Suitability, number> = { BEST: 70, GOOD: 55, CAUTION: 35, AVOID: 15 };
@@ -103,6 +109,8 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
  *  G1  카페인 전역 금기 (양약 복용 또는 부교감 저하)
  *  G2  자몽류 전역 금기 (양약 복용)
  *  G3  양약 상호작용 위험 식품 차단 (양약 복용)
+ *  G-DRUG 약물 사전 규칙 (BLOCK 차단 / CAUTION 주의)
+ *  G-CAP 차단은 아니지만 주의 필요 → '주의' 구간 고정
  *  R1  병리 상태 차단 태그 (기체증: 인삼·홍삼)
  *  T   실효 한열 가중
  *  Q   순기 점수 가중 (기체증 ×2)
@@ -132,16 +140,37 @@ export function scoreFood(food: SasangFoodItem, ctx: CookingContext, profile: Us
   hits.push({ ruleId: 'R0', label: `${spec.label} 적합도 ${SUIT_LABEL[suit]}`, delta: BASE_SCORE[suit] });
 
   // ── 전역 가드 ──────────────────────────────────────
+  // D3: 약을 먹는 동안(자몽) / 약을 먹거나 부교감이 저하된 동안(카페인)만 차단. 아니면 '주의'
+  let cautionReason: string | null = null;
   if (food.tags.includes('CAFFEINE')) {
-    if (meds || paraLow) block('G1', '카페인 전역 금기: 교감신경 항진·약물 대사 교란');
-    else add('G1', '카페인: 자율신경 자극', -10);
+    if (meds || paraLow) block('G1', '카페인 금기: 교감신경 항진·약물 대사 교란');
+    else {
+      add('G1', '카페인: 자율신경 자극', -10);
+      cautionReason = '카페인(복약·부교감 저하 없음)';
+    }
   }
   if (food.tags.includes('GRAPEFRUIT')) {
-    if (meds) block('G2', '자몽류 전역 금기: CYP3A4 억제로 약 농도 상승');
-    else add('G2', '자몽류: 복약 시작 시 금기 전환', -5);
+    if (meds) block('G2', '자몽류 금기: CYP3A4 억제로 약 농도 상승');
+    else {
+      add('G2', '자몽류: 복약을 시작하면 금기로 바뀝니다', -5);
+      cautionReason = '자몽류(복약 없음)';
+    }
   }
   if (meds && food.clinicalProperties.medInteractionRisk && !blocked) {
     block('G3', '양약 상호작용 위험 식품');
+  }
+
+  // H6 약물 사전 (D5)
+  const drugNotes = drugNotesFor(profile, food);
+  for (const n of drugNotes) {
+    const tail = n.verified ? '' : ' · 약사 확인 필요';
+    if (n.rule === 'BLOCK') block('G-DRUG', `${n.drugName}(${n.ingredient}) 금기: ${n.reason}${tail}`);
+    else if (n.rule === 'CAUTION') cautionReason = `${n.drugName}(${n.ingredient}) 병용 주의: ${n.reason}${tail}`;
+  }
+
+  // H8 술: 약 금기가 없어도 기체증·부교감 저하에서는 '주의'
+  if (food.tags.includes('ALCOHOL') && !blocked && (profile.subCondition === 'QI_STAGNATION' || paraLow)) {
+    cautionReason ??= '술: 기체증·부교감 저하에서 자율신경과 수면을 더 흐트러뜨림';
   }
 
   // ── 병리 상태 차단 ─────────────────────────────────
@@ -194,8 +223,26 @@ export function scoreFood(food: SasangFoodItem, ctx: CookingContext, profile: Us
   }
 
   const raw = hits.reduce((s, h) => s + h.delta, 0);
-  const score = Math.max(0, Math.min(100, Math.round(raw)));
-  return { foodId: food.id, score, verdict: verdictOf(score, blocked), blocked, effectiveThermal: eff, hits };
+  let score = Math.max(0, Math.min(100, Math.round(raw)));
+
+  // 차단은 아니지만 주의가 필요한 항목은 판정을 '주의' 구간에 고정한다
+  if (!blocked && cautionReason) {
+    const lo = VERDICT_THRESHOLDS.CAUTION;
+    const hi = VERDICT_THRESHOLDS.GOOD - 1;
+    const clamped = Math.max(lo, Math.min(hi, score));
+    hits.push({ ruleId: 'G-CAP', label: `${cautionReason} → 판정을 '주의'로 고정`, delta: clamped - score });
+    score = clamped;
+  }
+  return {
+    foodId: food.id,
+    score,
+    verdict: verdictOf(score, blocked),
+    blocked,
+    effectiveThermal: eff,
+    hits,
+    drugNotes,
+    needsVerification: drugNotes.some((n) => !n.verified),
+  };
 }
 
 export const TAG_LABEL: Partial<Record<string, string>> = {

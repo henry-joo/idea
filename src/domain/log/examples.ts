@@ -30,10 +30,11 @@ export function exampleLogs(today: string): DailyHealthLog[] {
         warmWaterOnly: week2 || i % 2 === 1,
       },
       cafeteriaFilterLog: {
-        morningPortionReduced: prev !== null && prev !== 'DEFENDED' && (week2 || i % 2 === 0),
+        morningPortion: prev === 'HEAVY_SNACK' ? 50 : prev === 'SAFE_SUBSTITUTE' ? 75 : 100,
         avoidedColdSaladAndPork: week2 ? i % 5 !== 3 : i % 3 === 1,
         includedRadishOrWarmSoup: week2 || i % 2 === 0,
       },
+      dinnerLog: { eatenAt: '19:00', amount: 'NORMAL', finishedBeforeCutoff: true },
       lateNightDefense: {
         cravingOccurred: n !== null,
         teaTimer15MinCompleted: n === 'DEFENDED' || (n === 'SAFE_SUBSTITUTE' && week2),

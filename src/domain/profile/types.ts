@@ -1,3 +1,4 @@
+import type { MedicationEntry } from '../medication/types';
 import type { HHMM } from '../shared/time';
 
 export type Constitution = 'SOEUM' | 'SOYANG' | 'TAEEUM' | 'TAEYANG';
@@ -18,11 +19,18 @@ export interface UserProfile {
   autonomicStatus: {
     parasympatheticLow: boolean;
     takingWesternMeds: boolean;
+    /** 복약 시각 기본 목록. 약 목록(medications)의 시각과 합쳐 60분 창을 만든다 */
     medSchedules: HHMM[];
+    /** [v2] 약 이름 입력 (D5) */
+    medications: MedicationEntry[];
   };
   mealEnvironment: {
     breakfast: 'CAFETERIA' | 'HOME' | 'SKIP';
     lunch: 'CAFETERIA' | 'RESTAURANT' | 'HOME';
+    /** [v2] 저녁 (D6) */
+    dinner: 'HOME' | 'RESTAURANT' | 'SKIP';
+    /** [v2] 주말·쉬는 날에는 아침·점심도 집밥 모드 */
+    weekendMode: 'HOME';
     lateNightHabit: 'FREQUENT' | 'OCCASIONAL' | 'NONE';
   };
   /**
@@ -35,4 +43,6 @@ export interface UserProfile {
     dinner: HHMM;
     bedtime: HHMM;
   };
+  /** [v2] 쉬는 날로 직접 표시한 날짜 (공휴일 데이터가 없어서 사용자가 표시) */
+  holidayDates: string[];
 }

@@ -1,7 +1,7 @@
 import { CONSTITUTION_MATRIX } from '../constitution/matrix';
 import { getFood } from '../food/catalog';
 import { medWindowClassOf } from '../food/types';
-import type { NightOutcome } from '../log/types';
+import type { DinnerAmount, NightOutcome } from '../log/types';
 import { checkIntakeAt } from '../medication/safeguard';
 import type { UserProfile } from '../profile/types';
 import { evaluateDishAt } from '../cafeteria/tray';
@@ -44,6 +44,8 @@ export interface FunnelState {
   timerCompleted: boolean;
   answers: Record<string, boolean>;
   hungerVerdict: 'FAKE' | 'REAL' | null;
+  /** 저녁을 거르거나 적게 먹어 Step 2를 건너뛰었는가 (H5) */
+  skippedHungerCheck?: boolean;
   outcome: NightOutcome | null;
   intakeAtMin: number | null;
   substituteId: string | null;
@@ -82,8 +84,13 @@ export function timerRemainingMs(s: FunnelState, nowMs: number): number {
 }
 
 /** 타이머가 끝났으면 완료로, 아니면 '대기 미완료'로 Step 2에 넘어간다 */
-export function finishWaiting(s: FunnelState, nowMs: number): FunnelState {
-  return { ...s, step: 'HUNGER_CHECK', timerCompleted: timerRemainingMs(s, nowMs) === 0 };
+export function finishWaiting(s: FunnelState, nowMs: number, dinner?: DinnerAmount): FunnelState {
+  const timerCompleted = timerRemainingMs(s, nowMs) === 0;
+  // H5: 저녁을 거르거나 적게 먹은 날의 허기는 진짜일 가능성이 높다 → 판별 없이 대체식으로
+  if (dinner === 'SKIPPED' || dinner === 'LIGHT') {
+    return { ...s, step: 'SUBSTITUTE', timerCompleted, hungerVerdict: 'REAL', skippedHungerCheck: true };
+  }
+  return { ...s, step: 'HUNGER_CHECK', timerCompleted };
 }
 
 export interface HungerQuestion {

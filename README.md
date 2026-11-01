@@ -7,16 +7,17 @@
 |---|---|
 | 오늘 | 지금 시각 기준 복약 창 상태, 24시간 복약·식사 띠, 전날 야식에 따른 아침 식사량, 미주신경 루틴과 4-7-8 호흡 |
 | 식판 | 구내식당 메뉴판을 붙여 넣으면 담기·조금만·거르기·보류로 나누고 실제 식판 칸에 배치. 판정 근거(규칙별 점수) 펼쳐 보기 |
+| 저녁 | 밥·국·단백질·익힌 채소 조합 3개와 저녁 마감(취침 3시간 전), 저녁 기록. 주말·쉬는 날엔 아침·점심도 같은 방식 |
 | 야식 | 따뜻한 차 + 15분 타이머 → 가짜 배고픔 6문항 → 초저부담 대체식. 결과와 공복 시간을 기록에 자동 반영 |
 | 기록 | 명세의 DailyHealthLog 입력, 14일 명치 답답함 추이, 전날 밤 결과별 다음 날 상태, 레드 플래그 |
-| 내 몸 | 4체질·병리 상태·복약 시각·식사 환경 설정, 식재료 판정기(조리법·온도·양념을 바꾸며 점수 확인) |
+| 내 몸 | 4체질·병리 상태·식사 환경 설정과 식재료 판정기. 하위 메뉴: **약**(약 이름 → 약별 금기 음식·출처·검증 표시), **알림·백업**(캘린더 .ics, 앱 알림, 홈 화면 설치, JSON 백업·복원) |
 
 ## 실행
 
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 임상 가드레일 테스트 37개
+npm test           # 임상 가드레일·v2 수용 테스트 81개
 npm run build      # dist/
 npm run build:artifact   # claude.ai Artifact용 단일 HTML 조각 → dist-artifact/sungi-artifact.html
 ```
@@ -26,8 +27,11 @@ npm run build:artifact   # claude.ai Artifact용 단일 HTML 조각 → dist-art
 
 ## 구조와 규칙
 
-규칙 엔진 계산식, 명세와 다르게 해석한 지점, 임상적으로 추가한 규칙, 확장 방법은
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)에 있다.
+규칙 엔진 계산식과 확장 방법은 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
+결정과 스스로 정한 기본값은 [docs/DECISIONS.md](docs/DECISIONS.md),
+Claude Code용 개발 프롬프트는 [docs/prompts/sungi-meta-prompt-v2.md](docs/prompts/sungi-meta-prompt-v2.md)에 있다.
+
+**설치·알림:** 휴대폰 브라우저로 배포 주소를 열고 홈 화면에 추가한다(iPhone은 공유 → 홈 화면에 추가). 이 앱은 서버가 없어 앱이 닫혀 있을 땐 스스로 알림을 보낼 수 없으므로, 알림은 ‘내 몸 → 알림·백업’에서 캘린더 파일을 받아 휴대폰 캘린더에 넣는 방식이 가장 확실하다.
 
 ## 주의
 

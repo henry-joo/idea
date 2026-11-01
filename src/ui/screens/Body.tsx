@@ -104,6 +104,7 @@ export function BodyScreen({ s }: { s: AppStore }) {
         <div className="stack">
           <Toggle id="para" checked={auto.parasympatheticLow} onChange={(v) => set({ autonomicStatus: { ...auto, parasympatheticLow: v } })} label="부교감신경 저하" hint="켜져 있으면 카페인을 전역 차단합니다" />
           <Toggle id="meds" checked={auto.takingWesternMeds} onChange={(v) => set({ autonomicStatus: { ...auto, takingWesternMeds: v } })} label="자율신경 조절 양약 복용 중" hint="복약 ±60분 한방차·유제품·과일 보류, 자몽·고농축 홍삼 차단" />
+          {auto.takingWesternMeds && <p className="muted small">약 이름과 약마다 피할 음식은 ‘약’ 화면에서 관리합니다.</p>}
           {auto.takingWesternMeds && <MedTimes profile={profile} onChange={(medSchedules) => set({ autonomicStatus: { ...auto, medSchedules } })} />}
         </div>
       </Section>
@@ -124,6 +125,14 @@ export function BodyScreen({ s }: { s: AppStore }) {
               <option value="CAFETERIA">회사 구내식당</option>
               <option value="RESTAURANT">외식</option>
               <option value="HOME">집</option>
+            </select>
+          </label>
+          <label className="field" htmlFor="env-d">
+            <span className="field-label">저녁</span>
+            <select id="env-d" value={profile.mealEnvironment.dinner} onChange={(e) => set({ mealEnvironment: { ...profile.mealEnvironment, dinner: e.target.value as UserProfile['mealEnvironment']['dinner'] } })}>
+              <option value="HOME">집</option>
+              <option value="RESTAURANT">외식</option>
+              <option value="SKIP">거름</option>
             </select>
           </label>
           <label className="field" htmlFor="env-n">

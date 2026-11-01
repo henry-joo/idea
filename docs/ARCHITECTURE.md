@@ -134,7 +134,7 @@ WARM_DRINK ──(15분 타이머 / 건너뛰기)──▶ HUNGER_CHECK ──(6
 
 ## 7. 테스트
 
-`npm test` → `src/domain/guardrails.test.ts` 37개. 명세의 다섯 가드레일을 각각 검증한다.
+`npm test` → `guardrails.test.ts`(v1 가드레일 37개) + `v2.test.ts`(약물·D2~D4·저녁·알림·백업 44개). 명세의 다섯 가드레일을 각각 검증한다.
 
 | 묶음 | 핵심 단언 |
 |---|---|
@@ -144,9 +144,26 @@ WARM_DRINK ──(15분 타이머 / 건너뛰기)──▶ HUNGER_CHECK ──(6
 | §3-4 식판 | 하드 룰 4종, 점심 후식 과일 보류, 야식 다음 날 아침만 50% |
 | §3-5 퍼널 | 21:30 복약 시 진피차 → 미온수, 가짜 배고픔 판정, 공복 시간, 자정 귀속 |
 
-## 8. 다음 단계 제안
+## 8. v2 추가분
 
-1. **약물별 상호작용 테이블**: 지금은 "자율신경 조절 양약" 한 덩어리다. 성분명(예: 에스시탈로프람, 프로프라놀롤, 모사프리드)을 입력받아 CYP 경로별로 금기를 세분화
+결정 근거와 기본값은 [DECISIONS.md](DECISIONS.md), 프롬프트는 [prompts/sungi-meta-prompt-v2.md](prompts/sungi-meta-prompt-v2.md).
+
+| 모듈 | 내용 |
+|---|---|
+| `medication/drugs.ts` | 약물 사전 10종·규칙 12개. 규칙은 BLOCK(차단)·SEPARATE(n분 간격)·CAUTION(주의)·CONSISTENT(매일 같게). 모든 규칙에 `source`·`verified`. 엔진은 걸린 규칙을 `FoodScore.drugNotes`로 돌려주고, 미검증이면 `needsVerification` |
+| `scoring/engine.ts` | 차단은 아니지만 주의가 필요한 항목(카페인·자몽 조건 꺼짐, 약 병용 주의, 술)은 `G-CAP`으로 '주의' 구간에 점수를 고정 |
+| `scoring/dish.ts` | D4 김치 규칙, '주의' 재료가 든 반찬은 식판에서 거르기(D-CAP) |
+| `meal/recommend.ts` | 밥·국·단백질·익힌 채소 조합 3개. 식판과 같은 엔진·복약 창을 거친다. 저녁 마감, 쉬는 날 판정 |
+| `night/funnel.ts` | 저녁을 거르거나 적게 먹은 날 Step 2 생략 |
+| `reminders/` | `dailyReminders(profile)`가 알림의 단일 출처. `.ics`와 앱 내 알림이 모두 이것을 쓴다 |
+| `log/migrate.ts` | v1 기록·프로필을 v2로 올림. 저장소 로드와 백업 복원이 같은 코드를 쓴다 |
+| `backup/backup.ts` | 백업 직렬화·복원 검증(버전, 체질 값, 시각 형식, 중복 날짜) |
+| `public/` | 매니페스트, 서비스 워커(앱 셸 캐시), 아이콘 |
+
+## 9. 다음 단계 제안
+
+1. **약물 사전 검증**: 규칙 12개를 식약처 DUR·허가사항과 대조해 `verified: true`로 올리고 약 종류 확대
 2. **사진 메뉴 인식**: 구내식당 메뉴판 사진 → OCR → 기존 파서 재사용
+3. **Web Push**: 앱이 닫혀 있어도 울리는 알림. 서버와 구독 저장소가 필요해 이번 범위에서 제외(캘린더 `.ics`로 대체)
 3. **서버 동기화**: `HealthRepository` 구현 교체, 한의사와 기록 공유
 4. **체질 진단 설문**: 지금은 체질을 직접 고른다. QSCC II 등 설문은 보조 지표로만

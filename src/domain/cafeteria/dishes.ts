@@ -105,8 +105,9 @@ export const CAFETERIA_DISHES: readonly Dish[] = [
   d('side_seaweed', '조미김', 'SIDE', [['seaweed', 1]], 'GRILLED', false, 'ROOM', [], ['김', '김구이', '도시락김']),
 
   // 김치
-  d('kimchi_napa', '배추김치', 'KIMCHI', [['napa_cabbage', 0.7], ['chili', 0.15], ['garlic', 0.15]], 'RAW', false, 'COLD', ['FERMENTED'], ['김치', '포기김치', '겉절이', '열무김치'], '기체증 기간엔 신김치·찬 김치를 거르고, 먹는다면 2~3조각'),
-  d('kimchi_radish', '깍두기', 'KIMCHI', [['radish', 0.7], ['chili', 0.15], ['garlic', 0.15]], 'RAW', false, 'COLD', ['FERMENTED'], ['석박지', '총각김치', '동치미']),
+  d('kimchi_napa', '배추김치', 'KIMCHI', [['napa_cabbage', 0.7], ['chili', 0.15], ['garlic', 0.15]], 'RAW', false, 'ROOM', ['FERMENTED', 'KIMCHI'], ['김치', '포기김치', '겉절이', '열무김치'], '기체증 기간엔 2~3조각만'),
+  d('kimchi_radish', '깍두기', 'KIMCHI', [['radish', 0.7], ['chili', 0.15], ['garlic', 0.15]], 'RAW', false, 'ROOM', ['FERMENTED', 'KIMCHI'], ['석박지', '총각김치'], '기체증 기간엔 2~3조각만'),
+  d('kimchi_sour', '신김치·묵은지', 'KIMCHI', [['napa_cabbage', 0.7], ['chili', 0.15], ['garlic', 0.15]], 'RAW', false, 'COLD', ['FERMENTED', 'SOUR_KIMCHI', 'COLD_DISH'], ['신김치', '묵은지', '묵은김치', '동치미', '물김치', '나박김치'], '신맛·찬 국물은 기체증 기간엔 거르기'),
 
   // 면·일품
   d('one_janchi', '잔치국수', 'ONE_DISH', [['wheat', 0.8], ['egg', 0.1], ['zucchini', 0.1]], 'SOUP', true, 'HOT', ['NOODLE', 'WARM_SOUP'], ['국수', '칼국수', '수제비']),
@@ -133,6 +134,7 @@ export const CAFETERIA_DISHES: readonly Dish[] = [
   d('drink_green_tea', '녹차', 'DRINK', [['green_tea', 1]], 'AS_IS', false, 'HOT', [], ['말차']),
   d('drink_barley_tea', '보리차', 'DRINK', [['barley_tea', 1]], 'AS_IS', false, 'WARM', [], ['옥수수차']),
   d('drink_sungnyung', '숭늉', 'DRINK', [['sungnyung', 1]], 'AS_IS', false, 'HOT', [], ['누룽지차', '누룽지']),
+  d('drink_alcohol', '술', 'DRINK', [['alcohol', 1]], 'AS_IS', false, 'ROOM', [], ['소주', '맥주', '막걸리', '와인', '하이볼', '위스키', '회식', '맥주한잔']),
   d('drink_cold_water', '냉수', 'DRINK', [['cold_water', 1]], 'AS_IS', false, 'COLD', ['COLD_DISH'], ['찬물', '얼음물', '아이스']),
 ];
 

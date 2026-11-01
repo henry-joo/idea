@@ -1,10 +1,11 @@
 import { migrateLogs, mergeProfile } from '../log/migrate';
+import { normalizeMeals, type MealsByDate } from '../meal/store';
 import type { DailyHealthLog } from '../log/types';
 import { CONSTITUTIONS, SUB_CONDITIONS, type UserProfile } from '../profile/types';
 import { isHHMM } from '../shared/time';
 
 export const BACKUP_APP = 'sungi-diet';
-export const BACKUP_VERSION = 2;
+export const BACKUP_VERSION = 3;
 
 export interface BackupFile {
   app: typeof BACKUP_APP;
@@ -12,16 +13,18 @@ export interface BackupFile {
   exportedAt: string;
   profile: UserProfile;
   logs: DailyHealthLog[];
+  /** [v3] 날짜별로 입력한 아침·점심 */
+  meals?: MealsByDate;
 }
 
 /** 예시 기록은 백업에 넣지 않는다 */
-export function createBackup(profile: UserProfile, logs: DailyHealthLog[], now: Date = new Date()): BackupFile {
-  return { app: BACKUP_APP, version: BACKUP_VERSION, exportedAt: now.toISOString(), profile, logs: logs.filter((l) => !l.isExample) };
+export function createBackup(profile: UserProfile, logs: DailyHealthLog[], now: Date = new Date(), meals: MealsByDate = {}): BackupFile {
+  return { app: BACKUP_APP, version: BACKUP_VERSION, exportedAt: now.toISOString(), profile, logs: logs.filter((l) => !l.isExample), meals };
 }
 
 export const serializeBackup = (b: BackupFile): string => JSON.stringify(b, null, 2);
 
-export type ParsedBackup = { ok: true; profile: UserProfile; logs: DailyHealthLog[]; warnings: string[] } | { ok: false; error: string };
+export type ParsedBackup = { ok: true; profile: UserProfile; logs: DailyHealthLog[]; meals: MealsByDate; warnings: string[] } | { ok: false; error: string };
 
 /**
  * 백업 JSON을 읽는다. 버전이 없거나 1인 이전 기록도 받아서 v2로 올린다(AT-29).
@@ -56,5 +59,5 @@ export function parseBackup(text: string): ParsedBackup {
   for (const l of migrateLogs(o.logs)) if (!l.isExample) byDate.set(l.date, l);
   const dropped = total - byDate.size;
   if (dropped > 0) warnings.push(`기록 ${dropped}건은 날짜가 잘못되었거나 중복이라 제외했습니다.`);
-  return { ok: true, profile, logs: [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date)), warnings };
+  return { ok: true, profile, logs: [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date)), meals: normalizeMeals(o.meals), warnings };
 }

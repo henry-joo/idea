@@ -1,5 +1,6 @@
 import { mergeProfile, migrateLogs } from '../domain/log/migrate';
 import type { DailyHealthLog } from '../domain/log/types';
+import type { DayMeals } from '../domain/meal/day';
 import type { FunnelState } from '../domain/night/funnel';
 import type { UserProfile } from '../domain/profile/types';
 
@@ -14,6 +15,8 @@ export interface HealthRepository {
   saveLogs(logs: DailyHealthLog[]): void;
   loadFunnel(): FunnelState | null;
   saveFunnel(f: FunnelState | null): void;
+  loadMeals(): Record<string, DayMeals> | null;
+  saveMeals(m: Record<string, DayMeals>): void;
   loadNotifyOn(): boolean;
   saveNotifyOn(on: boolean): void;
 }
@@ -38,6 +41,8 @@ function write(key: string, value: unknown): void {
   }
 }
 
+import { normalizeMeals } from '../domain/meal/store';
+
 export const localRepository: HealthRepository = {
   // v1로 저장된 데이터도 읽는 순간 v2 형태로 올린다 (AT-29)
   loadProfile: () => {
@@ -52,6 +57,11 @@ export const localRepository: HealthRepository = {
   saveLogs: (logs) => write('logs', logs),
   loadFunnel: () => read<FunnelState>('funnel'),
   saveFunnel: (f) => write('funnel', f),
+  loadMeals: () => {
+    const raw = read<unknown>('meals');
+    return raw ? normalizeMeals(raw) : null;
+  },
+  saveMeals: (m) => write('meals', m),
   loadNotifyOn: () => read<boolean>('notify') === true,
   saveNotifyOn: (on) => write('notify', on),
 };

@@ -4,6 +4,7 @@ import { effectiveMedTimes } from '../../domain/medication/safeguard';
 import type { DrugRuleKind, MedicationEntry } from '../../domain/medication/types';
 import { isHHMM, toMinutes } from '../../domain/shared/time';
 import { Pill, Section, Seg, Toggle } from '../components/bits';
+import { Timeline24 } from '../components/Timeline24';
 import type { AppStore } from '../store';
 
 const RULE_LABEL: Record<DrugRuleKind, { tone: 'block' | 'hold' | 'little' | 'info'; label: string }> = {
@@ -148,6 +149,12 @@ export function MedsScreen({ s }: { s: AppStore }) {
           </>
         )}
       </Section>
+
+      {auto.takingWesternMeds && (
+        <Section title="복약 시계" kicker="한방차·유제품·과일을 미루는 시간">
+          <Timeline24 profile={profile} nowMin={s.nowMin} />
+        </Section>
+      )}
 
       {auto.takingWesternMeds && (
         <Section title="적용 중인 시각" kicker="복약 전후 60분">

@@ -284,7 +284,7 @@ b {
   max-width: 640px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(3, 1fr);
 }
 .tab {
   position: relative;
@@ -661,109 +661,6 @@ textarea {
 }
 
 /* ── 오늘 ──────────────────────────────────────────── */
-.state {
-  display: grid;
-  gap: 8px;
-  padding: 18px 18px 16px;
-  border-radius: 16px;
-  background: var(--take-soft);
-}
-.state.is-hold {
-  background: var(--hold-soft);
-}
-.state-main {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-}
-.state-word {
-  margin: 0;
-  font-size: clamp(2.8rem, 15vw, 3.8rem);
-  line-height: 1;
-  font-weight: 700;
-  color: var(--take);
-}
-.is-hold .state-word {
-  color: var(--hold);
-}
-.state-eta {
-  margin: 0;
-  display: grid;
-  justify-items: end;
-  line-height: 1.2;
-  font-size: var(--fs-sm);
-  color: var(--ink-2);
-}
-.state-eta-n {
-  font-size: 1.35rem;
-  color: var(--ink);
-}
-.state-line {
-  font-size: var(--fs-md);
-  line-height: 1.5;
-}
-.state-foot {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: var(--fs-sm);
-  color: var(--ink-2);
-}
-.next-card {
-  font: inherit;
-  text-align: left;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 2px 12px;
-  padding: 16px 18px;
-  border-radius: 14px;
-  border: 0;
-  background: var(--cobalt);
-  color: var(--cobalt-ink);
-  cursor: pointer;
-}
-.next-card .kicker {
-  grid-column: 1;
-  color: inherit;
-  opacity: 0.78;
-}
-.next-title {
-  grid-column: 1;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: var(--fs-lg);
-}
-.next-sub {
-  grid-column: 1;
-  color: inherit;
-  opacity: 0.85;
-  font-size: var(--fs-sm);
-}
-.next-arrow {
-  grid-column: 2;
-  grid-row: 1 / span 3;
-  align-self: center;
-  color: inherit;
-  font-size: 1.6rem;
-}
-.portion {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.bowl {
-  width: 64px;
-  flex: none;
-}
-.bowl-body {
-  fill: var(--cobalt);
-}
-.bowl-rice {
-  fill: var(--tray-well);
-  stroke: var(--line);
-}
 
 /* 24시간 띠 */
 .tl {
@@ -1708,27 +1605,6 @@ th {
   color: var(--ink);
   cursor: pointer;
 }
-.cutoff > div {
-  flex: none;
-}
-.cutoff {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 16px;
-  border-radius: var(--r);
-  background: var(--cobalt-soft);
-}
-.cutoff > p {
-  font-size: var(--fs-sm);
-}
-.cutoff-time {
-  flex: none;
-  white-space: nowrap;
-  font-size: 2rem;
-  line-height: 1.1;
-  color: var(--cobalt);
-}
 .combo {
   list-style: none;
   margin: 0;
@@ -1873,4 +1749,161 @@ details textarea {
     transition-duration: 0s !important;
     animation-duration: 0s !important;
   }
+}
+
+/* ── v3: 식단 흐름 (아침 입력 → 점심 입력 → 저녁 추천) ─────────── */
+.step-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+.step-n {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink-3);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+.step-n-accent {
+  border-color: var(--cobalt);
+  background: var(--cobalt);
+  color: var(--cobalt-ink);
+}
+.step-dinner {
+  border-top-width: 2px;
+  border-top-color: var(--cobalt);
+}
+.sample-fill {
+  width: 100%;
+}
+.link-btn {
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--cobalt);
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  text-align: left;
+  cursor: pointer;
+}
+.eval {
+  display: grid;
+  gap: 8px;
+}
+.eval-grade {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  font-size: var(--fs-sm);
+}
+.grade {
+  font-weight: 700;
+  font-size: var(--fs-md);
+}
+.grade-GOOD {
+  color: var(--take);
+}
+.grade-OK {
+  color: var(--ink);
+}
+.grade-CAUTION {
+  color: var(--skip);
+}
+.eaten {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+.eaten li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 10px;
+  align-items: center;
+  padding-block: 9px;
+}
+.eaten li + li {
+  border-top: 1px solid var(--line);
+}
+.eaten li.is-plain {
+  padding-block: 6px;
+}
+.eaten-name {
+  font-weight: 600;
+}
+.eaten-why {
+  grid-column: 1 / -1;
+}
+.headline {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.4rem;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.headline.is-pending {
+  color: var(--ink-2);
+  font-size: 1.1rem;
+}
+.because {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.because li {
+  display: grid;
+  gap: 1px;
+}
+.because-a {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.because-b {
+  font-weight: 600;
+}
+.portion-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 0;
+}
+.menu {
+  display: grid;
+  gap: 10px;
+}
+.why {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.why li::before {
+  content: '✓ ';
+  color: var(--take);
+  font-weight: 700;
+}
+.advice > summary {
+  list-style: revert;
+}
+.advice .tips,
+.advice .stack {
+  margin-top: 8px;
+}
+.link-summary {
+  cursor: pointer;
 }

@@ -31,7 +31,7 @@ export function DataScreen({ s }: { s: AppStore }) {
     return () => window.removeEventListener('beforeinstallprompt', on);
   }, []);
 
-  const backupText = useMemo(() => serializeBackup(createBackup(s.profile, s.realLogs)), [s.profile, s.realLogs]);
+  const backupText = useMemo(() => serializeBackup(createBackup(s.profile, s.realLogs, new Date(), s.meals)), [s.profile, s.realLogs, s.meals]);
   const hasReal = s.realLogs.length > 0;
 
   const enableNotify = async () => {
@@ -166,7 +166,7 @@ export function DataScreen({ s }: { s: AppStore }) {
                 type="button"
                 className="btn btn-primary"
                 onClick={() => {
-                  s.replaceData(pending.profile, pending.logs);
+                  s.replaceData(pending.profile, pending.logs, pending.meals);
                   setPending(null);
                   setRestoreText('');
                   note('restore', `복원했습니다. 기록 ${pending.logs.length}일`);

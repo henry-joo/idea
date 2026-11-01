@@ -1,52 +1,45 @@
-import { portionFor } from '../../domain/cafeteria/tray';
-import { CONSTITUTION_MATRIX, SUB_CONDITION_SPECS } from '../../domain/constitution/matrix';
+import { useMemo, useState } from 'react';
+import { SAMPLE_MENUS } from '../../domain/cafeteria/tray';
 import { detectRedFlags } from '../../domain/log/insights';
-import { checkIntakeAt, medStatusAt, MED_CLASS_LABEL, RESTRICTED_CLASSES } from '../../domain/medication/safeguard';
-import { dinnerCutoff } from '../../domain/meal/recommend';
+import type { DinnerAmount } from '../../domain/log/types';
+import { buildDinnerContext, evaluateEaten, GRADE_TEXT, type EatenSlot, type MealEvaluation } from '../../domain/meal/day';
+import { recommendMeal } from '../../domain/meal/recommend';
 import { medAdvisories } from '../../domain/medication/drugs';
-import { isLateNight } from '../../domain/night/funnel';
-import { forwardDiff, fromMinutes, toMinutes } from '../../domain/shared/time';
-import { Breathing478 } from '../components/Breathing478';
-import { Pill, Section, Toggle } from '../components/bits';
-import { Timeline24 } from '../components/Timeline24';
+import { fromMinutes, isHHMM, toMinutes } from '../../domain/shared/time';
+import { EatenPill, Pill, Seg } from '../components/bits';
 import type { AppStore } from '../store';
 
 const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토'];
+const SLOT_LABEL: Record<EatenSlot, string> = { BREAKFAST: '아침', LUNCH: '점심' };
+const AMOUNT: { value: DinnerAmount; label: string }[] = [
+  { value: 'SKIPPED', label: '거름' },
+  { value: 'LIGHT', label: '가볍게' },
+  { value: 'NORMAL', label: '보통' },
+  { value: 'HEAVY', label: '많이' },
+];
 
 export function TodayScreen({ s }: { s: AppStore }) {
-  const { profile, nowMin, today } = s;
-  const spec = CONSTITUTION_MATRIX[profile.constitution];
-  const sub = SUB_CONDITION_SPECS[profile.subCondition];
-  const meds = profile.autonomicStatus.takingWesternMeds;
-  const status = medStatusAt(profile, nowMin);
-  const check = checkIntakeAt(profile, 'HERBAL_TEA', nowMin);
-  const portion = portionFor('BREAKFAST', s.yesterdayReal);
-  const log = s.getLog(today);
+  const { profile, today } = s;
+  const d = s.now;
+  const day = s.mealsOf(today);
+  const evals = useMemo(
+    () => [evaluateEaten(day.breakfast, 'BREAKFAST', profile), evaluateEaten(day.lunch, 'LUNCH', profile)],
+    [day.breakfast, day.lunch, profile],
+  );
+  const context = useMemo(() => buildDinnerContext(profile, evals), [profile, evals]);
+  const plan = useMemo(() => recommendMeal(profile, 'DINNER', context), [profile, context]);
   const flags = detectRedFlags(s.realLogs, today);
   const advisories = medAdvisories(profile);
-  const d = s.now;
-
-  const next = nextAction(s);
-  const etaMin: number | null = check.allowed
-    ? status.upcoming && meds
-      ? forwardDiff(nowMin, status.upcoming.start)
-      : null
-    : check.nextAllowedAt
-      ? forwardDiff(nowMin, toMinutes(check.nextAllowedAt))
-      : null;
+  const nothingYet = evals.every((e) => e.empty);
 
   return (
     <div className="screen">
       <header className="hero">
         <p className="kicker">
-          {d.getMonth() + 1}월 {d.getDate()}일 {WEEKDAY[d.getDay()]}요일 · <span className="mono">{fromMinutes(nowMin)}</span>
+          {d.getMonth() + 1}월 {d.getDate()}일 {WEEKDAY[d.getDay()]}요일
         </p>
-        <h1 className="serif">
-          {spec.label} <span className="hanja">{spec.hanja}</span>
-        </h1>
-        <p className="hero-sub">
-          {sub.label} · {profile.autonomicStatus.parasympatheticLow ? '부교감 저하' : '자율신경 안정'} · {meds ? '양약 복용 중' : '양약 없음'}
-        </p>
+        <h1>오늘 식단</h1>
+        <p className="hero-sub">아침·점심에 드신 걸 적으면, 저녁을 거기에 맞춰 드려요.</p>
       </header>
 
       {flags.map((f) => (
@@ -54,7 +47,6 @@ export function TodayScreen({ s }: { s: AppStore }) {
           {f.message}
         </div>
       ))}
-
       {advisories.length > 0 && (
         <button type="button" className="banner banner-hold banner-btn" onClick={() => s.go('meds')}>
           <span>사전에 없는 약이 있습니다: {advisories.map((a) => a.split(':')[0]).join(', ')}. 약사에게 확인하세요.</span>
@@ -62,116 +54,236 @@ export function TodayScreen({ s }: { s: AppStore }) {
         </button>
       )}
 
-      <section className={`state ${check.allowed ? 'is-ok' : 'is-hold'}`} aria-label="지금 먹어도 되나">
-        <p className="kicker">지금 한방차·유제품·과일</p>
-        <div className="state-main">
-          <p className="state-word serif">{check.allowed ? '가능' : '보류'}</p>
-          {etaMin !== null && (
-            <p className="state-eta">
-              <span className="mono state-eta-n">{etaMin >= 60 ? `${Math.floor(etaMin / 60)}시간 ${etaMin % 60}분` : `${etaMin}분`}</span>
-              <span>{check.allowed ? '뒤 제한 시작' : '뒤 가능'}</span>
-            </p>
-          )}
-        </div>
-        <p className="state-line">
-          {check.allowed ? (
-            status.upcoming && meds ? (
-              <>
-                다음 제한 <b className="mono">{fromMinutes(status.upcoming.start)}</b> · {status.upcoming.medTime} 복약 1시간 전부터
-              </>
-            ) : (
-              '제한 없이 드셔도 됩니다.'
-            )
-          ) : (
-            <>
-              <b className="mono">{check.window!.medTime}</b> 복약 전후 60분입니다. <b className="mono">{check.nextAllowedAt}</b>부터 {RESTRICTED_CLASSES.map((c) => MED_CLASS_LABEL[c]).join('·')}을 드세요. 지금은 미온수만.
-            </>
-          )}
-        </p>
-        <p className="state-foot">
-          <Pill tone="block">전역 금기</Pill> 커피·녹차 등 카페인, 자몽류
-        </p>
-      </section>
+      <MealStep n={1} slot="BREAKFAST" ev={evals[0]!} s={s} />
+      <MealStep n={2} slot="LUNCH" ev={evals[1]!} s={s} />
 
-      <Timeline24 profile={profile} nowMin={nowMin} />
-
-      {next && (
-        <button type="button" className="next-card" onClick={next.go}>
-          <span className="kicker">{next.kicker}</span>
-          <span className="next-title">{next.title}</span>
-          <span className="next-sub">{next.sub}</span>
-          <span className="next-arrow" aria-hidden="true">→</span>
+      {nothingYet && (
+        <button
+          type="button"
+          className="btn btn-ghost sample-fill"
+          onClick={() => {
+            s.setMealEntry(today, 'breakfast', { text: SAMPLE_MENUS.BREAKFAST, skipped: false });
+            s.setMealEntry(today, 'lunch', { text: SAMPLE_MENUS.LUNCH, skipped: false });
+          }}
+        >
+          예시 식단으로 채워 보기
         </button>
       )}
 
-      {profile.mealEnvironment.breakfast !== 'SKIP' && (
-        <Section kicker="동적 가이드" title={`오늘 아침 ${portion.percent}%`}>
-          <div className="portion">
-            <PortionBowl percent={portion.percent} />
-            <p>{portion.reason}</p>
-          </div>
-          {!s.yesterdayReal && <p className="muted small">어젯밤 기록이 없어 평소 양으로 계산했습니다. 야식 탭에서 기록하면 반영됩니다.</p>}
-        </Section>
-      )}
-
-      <Section kicker="미주신경 루틴" title="오늘의 세 가지">
-        <div className="stack">
-          <Toggle
-            id="today-breath"
-            checked={log.vagalToneRoutine.preMealBreathing478}
-            onChange={(v) => s.upsertLog(today, (l) => ({ ...l, vagalToneRoutine: { ...l.vagalToneRoutine, preMealBreathing478: v } }))}
-            label="식전 2분 4-7-8 호흡"
-            hint="숨을 길게 내쉬면 미주신경이 켜지고 위 상부가 풀립니다"
-          />
-          <Toggle
-            id="today-walk"
-            checked={log.vagalToneRoutine.postMealWalk15Min}
-            onChange={(v) => s.upsertLog(today, (l) => ({ ...l, vagalToneRoutine: { ...l.vagalToneRoutine, postMealWalk15Min: v } }))}
-            label="식후 15분 리듬 워킹"
-            hint="빠르지 않게, 대화 가능한 속도로"
-          />
-          <Toggle
-            id="today-water"
-            checked={log.vagalToneRoutine.warmWaterOnly}
-            onChange={(v) => s.upsertLog(today, (l) => ({ ...l, vagalToneRoutine: { ...l.vagalToneRoutine, warmWaterOnly: v } }))}
-            label="식사 중 찬물 대신 온수"
-            hint="정수기 온수 반 컵. 찬물은 위 평활근을 다시 굳힙니다"
-          />
-        </div>
-        <Breathing478 onDone={() => s.upsertLog(today, (l) => ({ ...l, vagalToneRoutine: { ...l.vagalToneRoutine, preMealBreathing478: true } }))} />
-      </Section>
+      <DinnerStep s={s} plan={plan} />
     </div>
   );
 }
 
-function PortionBowl({ percent }: { percent: number }) {
+function MealStep({ n, slot, ev, s }: { n: number; slot: EatenSlot; ev: MealEvaluation; s: AppStore }) {
+  const key = slot === 'BREAKFAST' ? 'breakfast' : 'lunch';
+  const entry = s.mealsOf(s.today)[key];
+  const time = slot === 'BREAKFAST' ? s.profile.routine.breakfast : s.profile.routine.lunch;
+  const where = (slot === 'BREAKFAST' ? s.profile.mealEnvironment.breakfast : s.profile.mealEnvironment.lunch) === 'CAFETERIA' ? '회사' : '';
+  const id = `meal-${key}`;
+
   return (
-    <svg className="bowl" viewBox="0 0 64 44" role="img" aria-label={`밥 ${percent}%`}>
-      <path className="bowl-rice" d={percent === 50 ? 'M10 24 Q32 16 54 24 L54 26 L10 26Z' : percent === 75 ? 'M9 23 Q32 9 55 23 L55 26 L9 26Z' : 'M8 22 Q32 2 56 22 L56 26 L8 26Z'} />
-      <path className="bowl-body" d="M4 24 H60 Q58 42 32 42 Q6 42 4 24Z" />
-    </svg>
+    <section className="section step" aria-labelledby={`${id}-h`}>
+      <header className="step-head">
+        <span className="step-n" aria-hidden="true">
+          {n}
+        </span>
+        <div>
+          <h2 id={`${id}-h`}>{SLOT_LABEL[slot]}</h2>
+          <p className="muted small">
+            {where && `${where} · `}
+            <span className="mono">{time}</span>
+          </p>
+        </div>
+        <Seg<'ate' | 'skip'>
+          id={`${id}-seg`}
+          label={`${SLOT_LABEL[slot]} 먹음 여부`}
+          value={entry.skipped ? 'skip' : 'ate'}
+          onChange={(v) => s.setMealEntry(s.today, key, { ...entry, skipped: v === 'skip' })}
+          options={[
+            { value: 'ate', label: '먹었어요' },
+            { value: 'skip', label: '안 먹었어요' },
+          ]}
+        />
+      </header>
+
+      {!entry.skipped && (
+        <>
+          <label className="sr-only" htmlFor={`${id}-text`}>
+            {SLOT_LABEL[slot]}에 먹은 반찬
+          </label>
+          <textarea
+            id={`${id}-text`}
+            rows={2}
+            value={entry.text}
+            onChange={(e) => s.setMealEntry(s.today, key, { ...entry, text: e.target.value })}
+            placeholder="먹은 반찬을 쉼표로 적어 주세요. 예: 잡곡밥, 소고기무국, 제육볶음, 콩나물무침"
+          />
+          <button
+            type="button"
+            className="link-btn"
+            onClick={() => {
+              s.setTrayMeal(slot);
+              s.go('tray');
+            }}
+          >
+            먹기 전에 메뉴판으로 골라 보기 →
+          </button>
+        </>
+      )}
+
+      {ev.skipped && <p className="muted">거르셨어요. 저녁 추천에 반영할게요.</p>}
+
+      {ev.items.length > 0 && (
+        <div className="eval">
+          <p className="eval-grade">
+            <span className={`grade grade-${ev.grade ?? 'none'}`}>{ev.grade ? GRADE_TEXT[ev.grade] : ''}</span>
+            <span className="muted">{ev.summary}</span>
+          </p>
+          <ul className="eaten">
+            {ev.items.map((it, i) => (
+              <li key={`${it.name}-${i}`} className={it.reason ? '' : 'is-plain'}>
+                <span className="eaten-name">
+                  {it.name}
+                  {it.inferred && <span className="muted small"> (추정)</span>}
+                </span>
+                <EatenPill v={it.label} />
+                {it.reason && <span className="eaten-why muted small">{it.reason}</span>}
+              </li>
+            ))}
+          </ul>
+          {ev.unknown.length > 0 && <p className="small muted">알아보지 못한 이름: {ev.unknown.join(', ')}. 주재료를 함께 적어 주세요.</p>}
+        </div>
+      )}
+      {!ev.items.length && ev.unknown.length > 0 && <p className="banner banner-hold">알아보지 못한 이름: {ev.unknown.join(', ')}. 주재료를 함께 적어 주세요 (예: 오늘의특선(돼지고기)).</p>}
+    </section>
   );
 }
 
-function nextAction(s: AppStore): { kicker: string; title: string; sub: string; go: () => void } | null {
-  const { profile, nowMin } = s;
-  const b = toMinutes(profile.routine.breakfast);
-  const l = toMinutes(profile.routine.lunch);
-  const cutoff = toMinutes(dinnerCutoff(profile));
-  if (isLateNight(nowMin)) {
-    return { kicker: '야식 시간대', title: '배고프면 바로 먹지 말고 퍼널부터', sub: '따뜻한 차 → 15분 → 가짜 배고픔 판별', go: () => s.go('night') };
-  }
-  if (s.homeDay && nowMin < cutoff - 60) {
-    return { kicker: '쉬는 날 · 집밥', title: '오늘 식사 추천 보기', sub: '아침·점심·저녁을 같은 규칙으로 추천합니다', go: () => s.go('dinner') };
-  }
-  if (profile.mealEnvironment.breakfast === 'CAFETERIA' && nowMin < b + 60) {
-    return { kicker: `아침 ${profile.routine.breakfast} · 구내식당`, title: '아침 식판 거르기', sub: '메뉴판을 붙여 넣으면 담을 것과 거를 것을 나눠 드립니다', go: () => { s.setTrayMeal('BREAKFAST'); s.go('tray'); } };
-  }
-  if (profile.mealEnvironment.lunch === 'CAFETERIA' && nowMin < l + 60) {
-    return { kicker: `점심 ${profile.routine.lunch} · 구내식당`, title: '점심 식판 거르기', sub: '후식 과일·요구르트는 복약 창을 같이 확인합니다', go: () => { s.setTrayMeal('LUNCH'); s.go('tray'); } };
-  }
-  if (profile.mealEnvironment.dinner !== 'SKIP' && nowMin < cutoff) {
-    return { kicker: `저녁 마감 ${dinnerCutoff(profile)}`, title: '저녁 메뉴 추천', sub: '밥·국·단백질·익힌 채소 조합과 야식 예방 안내', go: () => s.go('dinner') };
-  }
-  return { kicker: '하루 마무리', title: '오늘 명치 상태 기록하기', sub: '내일 아침 식사량과 주간 분석에 쓰입니다', go: () => s.go('log') };
+function DinnerStep({ s, plan }: { s: AppStore; plan: ReturnType<typeof recommendMeal> }) {
+  const { profile, today } = s;
+  const ctx = plan.context!;
+  const [pick, setPick] = useState(0);
+  const combo = plan.combos[Math.min(pick, plan.combos.length - 1)];
+  const log = s.getLog(today);
+  const [amount, setAmount] = useState<DinnerAmount>(log.dinnerLog.amount);
+  const [eatenAt, setEatenAt] = useState(log.dinnerLog.eatenAt ?? profile.routine.dinner);
+  const [saved, setSaved] = useState(false);
+
+  const record = () => {
+    const t = isHHMM(eatenAt) ? eatenAt : profile.routine.dinner;
+    s.upsertLog(today, (l) => ({
+      ...l,
+      dinnerLog: { eatenAt: amount === 'SKIPPED' ? null : t, amount, finishedBeforeCutoff: amount === 'SKIPPED' || !plan.cutoff ? true : toMinutes(t) <= toMinutes(plan.cutoff) },
+    }));
+    setSaved(true);
+  };
+
+  return (
+    <section className="section step step-dinner" aria-labelledby="dinner-h">
+      <header className="step-head">
+        <span className="step-n step-n-accent" aria-hidden="true">
+          3
+        </span>
+        <div>
+          <h2 id="dinner-h">저녁 추천</h2>
+          <p className="muted small">
+            집 · <span className="mono">{plan.time}</span>
+            {plan.cutoff && (
+              <>
+                {' '}
+                · <span className="mono">{plan.cutoff}</span>까지 마치기
+              </>
+            )}
+          </p>
+        </div>
+      </header>
+
+      <p className={`headline ${ctx.filled ? '' : 'is-pending'}`}>{ctx.headline}</p>
+
+      {ctx.reasons.length > 0 && (
+        <ul className="because">
+          {ctx.reasons.map((r) => (
+            <li key={r.because}>
+              <span className="because-a">{r.because}</span>
+              <span className="because-b">→ {r.therefore}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <p className="portion-line">
+        <Pill tone={ctx.portion.level === 'LIGHT' ? 'little' : ctx.portion.level === 'FULL' ? 'take' : 'info'}>{ctx.portion.level === 'LIGHT' ? '가볍게' : ctx.portion.level === 'FULL' ? '든든하게' : '평소대로'}</Pill>
+        <span>{ctx.portion.text}</span>
+      </p>
+
+      {combo ? (
+        <div className="menu">
+          <div className="seg" role="tablist" aria-label="추천 저녁">
+            {plan.combos.map((_, i) => (
+              <button key={i} type="button" role="tab" aria-selected={pick === i} className={pick === i ? 'is-on' : ''} onClick={() => setPick(i)}>
+                추천 {i + 1}
+              </button>
+            ))}
+          </div>
+          <ul className="combo">
+            {(
+              [
+                ['밥', combo.rice],
+                ['국', combo.soup],
+                ['단백질', combo.protein],
+                ['익힌 채소', combo.veggie],
+                ...(combo.veggie2 ? ([['익힌 채소', combo.veggie2]] as const) : []),
+              ] as const
+            ).map(([label, dish], i) => (
+              <li key={`${label}-${i}`}>
+                <span className="combo-label">{label}</span>
+                <span className="combo-name">{dish.name}</span>
+                {dish.note && <span className="muted small combo-note">{dish.note}</span>}
+              </li>
+            ))}
+          </ul>
+          <ul className="why">
+            {combo.why.map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p className="banner banner-skip">지금 설정으로는 추천할 수 있는 조합이 없어요. 설정에서 체질과 복약 시각을 확인해 주세요.</p>
+      )}
+
+      {plan.advice.length > 0 && (
+        <details className="advice">
+          <summary className="link-summary">저녁 먹을 때 참고</summary>
+          <ul className="tips">
+            {plan.advice.map((a) => (
+              <li key={a}>{a}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      <details className="advice" onToggle={() => setSaved(false)}>
+        <summary className="link-summary">저녁 먹은 걸 기록하기</summary>
+        <div className="stack">
+          <Seg<DinnerAmount> id="dinner-amount" label="저녁 양" value={amount} onChange={(v) => { setAmount(v); setSaved(false); }} options={AMOUNT} />
+          {amount !== 'SKIPPED' && (
+            <label className="field-inline" htmlFor="dinner-time">
+              먹은 시각
+              <input id="dinner-time" type="time" value={eatenAt} onChange={(e) => { setEatenAt(e.target.value); setSaved(false); }} />
+            </label>
+          )}
+          <button type="button" className="btn btn-primary btn-wide" onClick={record}>
+            {saved ? '기록했어요' : '기록'}
+          </button>
+          <p className="muted small">밤에 배고플 때 ‘야식’ 화면이 이 기록을 보고 안내해 드려요. 지금 시각 {fromMinutes(s.nowMin)}.</p>
+        </div>
+      </details>
+
+      <button type="button" className="link-btn" onClick={() => s.go('night')}>
+        밤에 배고플 땐 →
+      </button>
+    </section>
+  );
 }

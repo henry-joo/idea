@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { TrayFinal } from '../../domain/cafeteria/tray';
+import { EATEN_LABEL_TEXT, type EatenLabel } from '../../domain/meal/day';
 import type { RuleHit, Verdict } from '../../domain/scoring/engine';
 
 type Tone = 'take' | 'little' | 'skip' | 'hold' | 'block' | 'info';
@@ -45,6 +46,11 @@ export const TRAY_UI: Record<TrayFinal, { tone: Tone; label: string }> = {
   HOLD: { tone: 'hold', label: '보류' },
   BLOCKED: { tone: 'block', label: '차단' },
 };
+
+const EATEN_TONE: Record<EatenLabel, Tone> = { GOOD: 'take', OK: 'info', PITY: 'little', AVOID: 'block', OVERLAP: 'hold' };
+export function EatenPill({ v }: { v: EatenLabel }) {
+  return <Pill tone={EATEN_TONE[v]}>{EATEN_LABEL_TEXT[v]}</Pill>;
+}
 
 export function VerdictPill({ v }: { v: Verdict }) {
   const u = VERDICT_UI[v];

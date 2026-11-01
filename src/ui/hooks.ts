@@ -11,8 +11,8 @@ export function useNow(intervalMs = 15_000): Date {
   return now;
 }
 
-export type Route = 'today' | 'tray' | 'dinner' | 'night' | 'log' | 'body' | 'meds' | 'data';
-export const ROUTES: readonly Route[] = ['today', 'tray', 'dinner', 'night', 'log', 'body', 'meds', 'data'];
+export type Route = 'today' | 'tray' | 'night' | 'log' | 'body' | 'meds' | 'data';
+export const ROUTES: readonly Route[] = ['today', 'tray', 'night', 'log', 'body', 'meds', 'data'];
 
 function routeFromHash(): Route {
   const h = window.location.hash.replace('#', '');

@@ -5,6 +5,8 @@ import { emptyLog, type DailyHealthLog } from '../domain/log/types';
 import type { FunnelState } from '../domain/night/funnel';
 import { DEFAULT_PROFILE } from '../domain/profile/defaults';
 import { isHomeDay } from '../domain/meal/recommend';
+import { emptyDayMeals, type DayMeals, type MealEntry } from '../domain/meal/day';
+import { pruneMeals, putEntry, type MealsByDate } from '../domain/meal/store';
 import type { UserProfile } from '../domain/profile/types';
 import { addDays, isoDate, nowMinutes } from '../domain/shared/time';
 import { localRepository as repo } from '../infra/storage';
@@ -23,7 +25,11 @@ export interface AppStore {
   upsertLog: (date: string, update: (l: DailyHealthLog) => DailyHealthLog) => void;
   clearExamples: () => void;
   /** 백업 복원: 프로필과 실제 기록을 통째로 바꾼다 */
-  replaceData: (profile: UserProfile, logs: DailyHealthLog[]) => void;
+  replaceData: (profile: UserProfile, logs: DailyHealthLog[], meals?: MealsByDate) => void;
+  /** 날짜별로 입력한 아침·점심 */
+  meals: MealsByDate;
+  mealsOf: (date: string) => DayMeals;
+  setMealEntry: (date: string, slot: 'breakfast' | 'lunch', entry: MealEntry) => void;
   /** 오늘이 주말·쉬는 날이라 아침·점심도 집밥인가 */
   homeDay: boolean;
   notifyOn: boolean;
@@ -58,10 +64,12 @@ export function useAppStore(): AppStore {
   const [profile, setProfileState] = useState<UserProfile>(() => repo.loadProfile() ?? DEFAULT_PROFILE);
   const [logs, setLogs] = useState<DailyHealthLog[]>(() => repo.loadLogs() ?? exampleLogs(isoDate()));
   const [funnel, setFunnelState] = useState<FunnelState | null>(() => freshFunnel(repo.loadFunnel()));
+  const [meals, setMeals] = useState<MealsByDate>(() => repo.loadMeals() ?? {});
   const [notifyOn, setNotifyOnState] = useState<boolean>(() => repo.loadNotifyOn());
   const [trayMeal, setTrayMeal] = useState<MealSlot>(() => (nowMinutes() < 10 * 60 ? 'BREAKFAST' : 'LUNCH'));
 
   useEffect(() => repo.saveLogs(logs), [logs]);
+  useEffect(() => repo.saveMeals(meals), [meals]);
 
   const setProfile = useCallback((p: UserProfile) => {
     setProfileState(p);
@@ -78,11 +86,18 @@ export function useAppStore(): AppStore {
   }, []);
 
   const replaceData = useCallback(
-    (p: UserProfile, l: DailyHealthLog[]) => {
+    (p: UserProfile, l: DailyHealthLog[], m?: MealsByDate) => {
       setProfile(p);
       setLogs(l.length ? l : []);
+      if (m) setMeals(m);
     },
     [setProfile],
+  );
+
+  const mealsOf = useCallback((date: string) => meals[date] ?? emptyDayMeals(), [meals]);
+  const setMealEntry = useCallback(
+    (date: string, slot: 'breakfast' | 'lunch', entry: MealEntry) => setMeals((prev) => pruneMeals(putEntry(prev, date, slot, entry), date)),
+    [],
   );
 
   const realLogs = useMemo(() => logs.filter((l) => !l.isExample), [logs]);
@@ -117,6 +132,9 @@ export function useAppStore(): AppStore {
     upsertLog,
     clearExamples,
     replaceData,
+    meals,
+    mealsOf,
+    setMealEntry,
     homeDay: isHomeDay(profile, today),
     notifyOn,
     setNotifyOn,
